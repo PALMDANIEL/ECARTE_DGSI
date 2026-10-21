@@ -24,6 +24,38 @@ enum OrgUnitType {
   UNITE
 }
 
+enum RequestStatus {
+  DRAFT
+  IN_PROGRESS
+  RETURNED
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum StepKind {
+  AVIS
+  VISA
+  TRAITEMENT
+  DECISION
+}
+
+enum StepResolution {
+  POSITION
+  SUPERVISOR_LEVEL
+  UNIT_TYPE_HEAD
+}
+
+enum StepResult {
+  PENDING
+  FAVORABLE
+  UNFAVORABLE
+  APPROVED
+  REJECTED
+  RETURNED
+  SKIPPED
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -32,16 +64,16 @@ enum Role {
 }
 
 model Company {
-  id             String          @id @default(cuid())
-  name           String          @unique
+  id             String               @id @default(cuid())
+  name           String               @unique
   logo           String?
   phone          String?
   email          String?
   website        String?
   address        String?
-  isActive       Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  isActive       Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
   users          User[]
   teams          Team[]
   cards          BusinessCard[]
@@ -50,6 +82,12 @@ model Company {
   positions      Position[]
   agentProfiles  AgentProfile[]
   ruleParameters RuleParameter[]
+  requestTypes   RequestType[]
+  absenceTypes   AbsenceType[]
+  workflows      WorkflowDefinition[]
+  requests       Request[]
+  formTemplates  FormTemplate[]
+  leaveDecisions LeaveDecision[]
 
   @@map("companies")
 }
@@ -98,6 +136,10 @@ model User {
   positionHoldings    PositionHolder[]
   delegationsReceived Delegation[]     @relation("Delegate")
   heldCards           BusinessCard[]   @relation("CardHolder")
+  requests            Request[]        @relation("RequestAgent")
+  leaveDecisions      LeaveDecision[]
+  stepsAssigned       RequestStep[]    @relation("StepAssignee")
+  stepsActed          RequestStep[]    @relation("StepActor")
 
   @@unique([email, companyId])
   @@index([companyId])
@@ -174,6 +216,8 @@ model Scan {
 }
 
 model Notification {
+  requestId String?
+  link      String?
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -360,4 +404,231 @@ model AuditLog {
   @@index([companyId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ======================= Module demandes administratives — phase 2 =======================
+
+model RequestType {
+  id                    String               @id @default(cuid())
+  companyId             String
+  company               Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code                  String
+  name                  String
+  prefix                String
+  requiresPriorDecision Boolean              @default(false)
+  attachmentRules       Json                 @default("[]")
+  isActive              Boolean              @default(true)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  requests              Request[]
+  workflows             WorkflowDefinition[]
+
+  @@unique([companyId, code])
+  @@map("request_types")
+}
+
+model AbsenceType {
+  id               String   @id @default(cuid())
+  companyId        String
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code             String
+  name             String
+  unit             String   @default("JOUR")
+  annualCap        Float?
+  deductsFromLeave Boolean  @default(false)
+  legalReference   String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([companyId, code])
+  @@map("absence_types")
+}
+
+model WorkflowDefinition {
+  id            String         @id @default(cuid())
+  companyId     String
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  requestTypeId String
+  requestType   RequestType    @relation(fields: [requestTypeId], references: [id], onDelete: Cascade)
+  version       Int
+  name          String?
+  isActive      Boolean        @default(true)
+  validFrom     DateTime       @default(now())
+  validTo       DateTime?
+  createdById   String?
+  createdAt     DateTime       @default(now())
+  steps         WorkflowStep[]
+  requests      Request[]
+
+  @@unique([requestTypeId, version])
+  @@index([companyId, requestTypeId])
+  @@map("workflow_definitions")
+}
+
+model WorkflowStep {
+  id                  String             @id @default(cuid())
+  workflowId          String
+  workflow            WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  order               Int
+  kind                StepKind
+  label               String?
+  resolution          StepResolution
+  positionId          String?
+  level               Int?
+  unitType            OrgUnitType?
+  isMandatory         Boolean            @default(true)
+  conditionJson       Json?
+  deadlineDays        Int?
+  escalatePositionId  String?
+  allowReturn         Boolean            @default(true)
+  rejectOnUnfavorable Boolean            @default(false)
+
+  @@unique([workflowId, order])
+  @@map("workflow_steps")
+}
+
+model Request {
+  id              String              @id @default(cuid())
+  companyId       String
+  company         Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reference       String              @unique
+  typeId          String
+  type            RequestType         @relation(fields: [typeId], references: [id])
+  agentId         String
+  agent           User                @relation("RequestAgent", fields: [agentId], references: [id], onDelete: Cascade)
+  status          RequestStatus       @default(DRAFT)
+  round           Int                 @default(1)
+  workflowId      String?
+  workflow        WorkflowDefinition? @relation(fields: [workflowId], references: [id], onDelete: SetNull)
+  data            Json
+  snapshot        Json?
+  leaveDecisionId String?
+  leaveDecision   LeaveDecision?      @relation("DecisionOfRequest", fields: [leaveDecisionId], references: [id], onDelete: SetNull)
+  submittedAt     DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  steps           RequestStep[]
+  documents       RequestDocument[]
+  attachments     RequestAttachment[]
+  issuedDecision  LeaveDecision?      @relation("DecisionFromRequest")
+
+  @@index([companyId, status])
+  @@index([agentId])
+  @@index([typeId])
+  @@map("requests")
+}
+
+model RequestStep {
+  id                  String     @id @default(cuid())
+  requestId           String
+  request             Request    @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  round               Int        @default(1)
+  order               Int
+  kind                StepKind
+  label               String
+  positionId          String?
+  assigneeId          String?
+  assignee            User?      @relation("StepAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  titleSnapshot       String?
+  result              StepResult @default(PENDING)
+  actorId             String?
+  actor               User?      @relation("StepActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorName           String?
+  actorTitle          String?
+  comment             String?
+  decidedAt           DateTime?
+  activatedAt         DateTime?
+  dueAt               DateTime?
+  rejectOnUnfavorable Boolean    @default(false)
+  allowReturn         Boolean    @default(true)
+  deadlineDays        Int?
+  note                String?
+
+  @@index([requestId, round, order])
+  @@index([positionId])
+  @@index([assigneeId])
+  @@map("request_steps")
+}
+
+model RequestDocument {
+  id          String   @id @default(cuid())
+  requestId   String
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  version     Int
+  path        String
+  sha256      String
+  size        Int
+  reason      String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@unique([requestId, version])
+  @@map("request_documents")
+}
+
+model RequestAttachment {
+  id           String   @id @default(cuid())
+  requestId    String
+  request      Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  code         String?
+  name         String
+  mime         String
+  size         Int
+  sha256       String
+  path         String
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([requestId])
+  @@map("request_attachments")
+}
+
+model RequestCounter {
+  id        String @id @default(cuid())
+  companyId String
+  prefix    String
+  year      Int
+  last      Int    @default(0)
+
+  @@unique([companyId, prefix, year])
+  @@map("request_counters")
+}
+
+model LeaveDecision {
+  id        String    @id @default(cuid())
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  agentId   String
+  agent     User      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  number    String
+  year      Int
+  days      Int
+  status    String    @default("VALID")
+  issuedAt  DateTime  @default(now())
+  requestId String?   @unique
+  request   Request?  @relation("DecisionFromRequest", fields: [requestId], references: [id], onDelete: SetNull)
+  usedBy    Request[] @relation("DecisionOfRequest")
+  createdAt DateTime  @default(now())
+
+  @@unique([companyId, number])
+  @@index([agentId])
+  @@map("leave_decisions")
+}
+
+model FormTemplate {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  typeCode    String
+  version     Int
+  html        String
+  css         String
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@unique([companyId, typeCode, version])
+  @@map("form_templates")
 }

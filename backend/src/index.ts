@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { app } from './app';
 import { config } from './infrastructure/config';
 import { logger } from './infrastructure/logger';
+import { htmlPdfService } from './infrastructure/pdf/html-pdf.service';
 import { cardPdfService } from './modules/business-cards/services/card-pdf.service';
 
 console.log('🚀 Démarrage du backend avec DATABASE_URL =', process.env.DATABASE_URL);
@@ -15,5 +16,6 @@ app.listen(PORT, '0.0.0.0', () => {
 process.on('SIGTERM', async () => {
   console.log('Fermeture de Puppeteer...');
   await cardPdfService.close();
+  await htmlPdfService.close();
   process.exit(0);
 });

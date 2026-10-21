@@ -46,6 +46,7 @@ export class MainLayoutComponent {
   private allItems = [
     { label: 'Tableau de bord', icon: 'pi pi-home', link: '/dashboard' },
     { label: 'Mes cartes', icon: 'pi pi-id-card', link: '/cards' },
+    { label: 'Demandes', icon: 'pi pi-inbox', link: '/requests' },
     { label: 'Statistiques', icon: 'pi pi-chart-line', link: '/statistics' },
     { label: 'Utilisateurs', icon: 'pi pi-users', link: '/users', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Équipes', icon: 'pi pi-sitemap', link: '/teams', roles: ['SUPER_ADMIN', 'ADMIN'] },
@@ -53,6 +54,9 @@ export class MainLayoutComponent {
     { label: 'Agents', icon: 'pi pi-id-card', link: '/admin/agents', roles: ['SUPER_ADMIN', 'ADMIN'], group: 'Administration' },
     { label: 'Organisation', icon: 'pi pi-sitemap', link: '/admin/organisation', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Postes', icon: 'pi pi-briefcase', link: '/admin/postes', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Circuits', icon: 'pi pi-share-alt', link: '/admin/circuits', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Types d\'absence', icon: 'pi pi-calendar-minus', link: '/admin/absences', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Modèles PDF', icon: 'pi pi-file-pdf', link: '/admin/modeles', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Journal d\'audit', icon: 'pi pi-shield', link: '/admin/audit', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Règles', icon: 'pi pi-sliders-h', link: '/admin/parametres', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Mon compte', icon: 'pi pi-user', link: '/account' }

@@ -38,6 +38,7 @@ class UpdateAgentDto {
   @IsOptional() supervisorId?: string | null;
 }
 class ImportDto { @IsString() csv!: string; @IsOptional() @IsBoolean() dryRun?: boolean; }
+class CredentialsDto { @IsEmail() email!: string; @IsOptional() @IsString() password?: string; }
 class ActiveDto { @IsBoolean() isActive!: boolean; }
 
 const toDate = (v?: string | null) => (v ? new Date(v) : v === null ? null : undefined);
@@ -82,6 +83,10 @@ router.put('/:id', admin, asyncHandler(async (req, res) => {
 }));
 
 router.post('/:id/pin/reset', admin, asyncHandler(async (req, res) => res.json(await agentService.resetPin(req.user.companyId, req.params.id, actorOf(req), req))));
+router.post('/:id/credentials', admin, asyncHandler(async (req, res) => {
+  const dto = await parseDto(CredentialsDto, req.body);
+  res.json(await agentService.setCredentials(req.user.companyId, req.params.id, dto, actorOf(req), req));
+}));
 router.put('/:id/active', admin, asyncHandler(async (req, res) => {
   const dto = await parseDto(ActiveDto, req.body);
   await agentService.setActive(req.user.companyId, req.params.id, dto.isActive, actorOf(req), req);

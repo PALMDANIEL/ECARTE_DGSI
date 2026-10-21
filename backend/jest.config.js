@@ -6,6 +6,7 @@ module.exports = {
   transform: { '^.+\\.ts$': 'ts-jest' },
   setupFiles: ['<rootDir>/tests/setup-env.ts'],
   globalSetup: '<rootDir>/tests/global-setup.ts',
+  globalTeardown: '<rootDir>/tests/global-teardown.ts',
   maxWorkers: 1,
   testTimeout: 120000,
   collectCoverageFrom: ['src/modules/**/*.ts', 'src/shared/**/*.ts', '!src/**/*.d.ts']

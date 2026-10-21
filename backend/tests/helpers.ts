@@ -32,6 +32,12 @@ export async function waitFor(check: () => Promise<boolean>, timeoutMs = 10000, 
   return false;
 }
 
+/** Jeton d'administration pour un utilisateur existant (responsable, titulaire de poste…). */
+export async function tokenFor(userId: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE' = 'EMPLOYEE') {
+  const u = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+  return jwt.sign({ id: u.id, email: u.email, companyId: u.companyId, role }, config.jwtSecret, { expiresIn: '1h' });
+}
+
 export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 /** Société + administrateur prêts à l'emploi. */

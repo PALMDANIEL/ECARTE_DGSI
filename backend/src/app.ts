@@ -22,6 +22,7 @@ import { agentRouter } from './modules/agents/routes';
 import { auditRouter } from './modules/audit/routes';
 import { settingsRouter } from './modules/settings/routes';
 import { accessRouter } from './modules/access/routes';
+import { requestTypeRouter, absenceTypeRouter, workflowRouter, formTemplateRouter, requestRouter } from './modules/requests/routes';
 import swaggerSpec from './infrastructure/swagger';
 import { cardPdfService } from './modules/business-cards/services/card-pdf.service';
 
@@ -73,6 +74,11 @@ app.use('/api/agents', agentRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/access', accessRouter);
+app.use('/api/request-types', requestTypeRouter);
+app.use('/api/absence-types', absenceTypeRouter);
+app.use('/api/workflows', workflowRouter);
+app.use('/api/form-templates', formTemplateRouter);
+app.use('/api/requests', requestRouter);
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

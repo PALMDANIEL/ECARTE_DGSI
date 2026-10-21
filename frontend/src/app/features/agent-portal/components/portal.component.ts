@@ -55,12 +55,7 @@ type Step = 'loading' | 'invalid' | 'pin' | 'file';
             <dt *ngIf="file.card.number">Carte n°</dt><dd *ngIf="file.card.number">{{ file.card.number }} <span class="pt-hint" *ngIf="file.card.expiresAt">(valable jusqu'au {{ file.card.expiresAt | date:'dd/MM/yyyy' }})</span></dd>
           </dl>
 
-          <h3>Mes démarches</h3>
-          <div *ngIf="!file.services.length" class="pt-soon">
-            <i class="pi pi-clock"></i>
-            <p>Les demandes de congé, de jouissance de congé et d'autorisation d'absence seront disponibles prochainement.</p>
-          </div>
-          <button *ngFor="let s of file.services" class="pt-service">{{ s.label }}</button>
+          <app-portal-requests (expired)="onExpired()"></app-portal-requests>
 
           <p class="pt-hint" style="margin-top:14px">Session ouverte pour {{ minutes }} minutes. <a href="javascript:void(0)" (click)="close()">Fermer la session</a></p>
         </div>
@@ -124,6 +119,7 @@ export class PortalComponent implements OnInit, OnDestroy {
     this.portal.verifyPin(this.token, this.pin).subscribe({
       next: r => {
         this.busy = false; this.pin = '';
+        this.portal.sessionToken = r.sessionToken;
         this.file = r; this.minutes = r.expiresInMinutes; this.step = 'file';
         // La session vit uniquement en mémoire (jamais dans localStorage) et se ferme à l'échéance
         this.timer = setTimeout(() => this.close(), r.expiresInMinutes * 60000);
@@ -140,5 +136,7 @@ export class PortalComponent implements OnInit, OnDestroy {
     });
   }
 
-  close() { this.file = null; this.pin = ''; this.step = 'pin'; clearTimeout(this.timer); }
+  onExpired() { this.close(); this.message = 'Votre session a expiré ou la carte n\'est plus valide. Scannez à nouveau votre carte.'; }
+
+  close() { this.portal.sessionToken = null; this.file = null; this.pin = ''; this.step = 'pin'; clearTimeout(this.timer); }
 }

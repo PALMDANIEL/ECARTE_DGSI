@@ -95,6 +95,31 @@ describe('agents', () => {
     expect((await request(app).get('/api/agents').set(b.headers)).body.total).toBe(0);
   });
 
+  it('crée un accès de connexion : mot de passe généré affiché une fois, connexion possible, email unique', async () => {
+    const t = await makeTenant();
+    const a = await createAgent(t.headers);
+    const res = await request(app).post(`/api/agents/${a.id}/credentials`).set(t.headers).send({ email: 'Chef@Test.Local' });
+    expect(res.status).toBe(200);
+    expect(res.body.email).toBe('chef@test.local');
+    expect(res.body.temporaryPassword).toMatch(/^[A-Za-z0-9]{12}$/);
+    const login = await request(app).post('/api/auth/login').send({ email: 'chef@test.local', password: res.body.temporaryPassword });
+    expect(login.status).toBe(200);
+    expect(JSON.stringify(login.body.user)).not.toMatch(/password/);
+    // mot de passe choisi : non renvoyé, minimum 8 caractères, email unique
+    const own = await request(app).post(`/api/agents/${a.id}/credentials`).set(t.headers).send({ email: 'chef@test.local', password: 'MotDePasse1' });
+    expect(own.body.temporaryPassword).toBeNull();
+    expect((await request(app).post(`/api/agents/${a.id}/credentials`).set(t.headers).send({ email: 'chef@test.local', password: 'court' })).status).toBe(400);
+    const b = await createAgent(t.headers);
+    expect((await request(app).post(`/api/agents/${b.id}/credentials`).set(t.headers).send({ email: 'chef@test.local' })).status).toBe(409);
+    expect((await request(app).post(`/api/agents/${a.id}/credentials`).set(t.headers).send({ email: 'pas-un-email' })).status).toBe(400);
+    expect(JSON.stringify(await prisma.auditLog.findMany({ where: { action: 'AGENT_CREDENTIALS_SET' } }))).not.toContain(res.body.temporaryPassword);
+    // autre société : introuvable ; employé : interdit
+    const other = await makeTenant();
+    expect((await request(app).post(`/api/agents/${a.id}/credentials`).set(other.headers).send({ email: 'x@y.zz' })).status).toBe(404);
+    const emp = await makeUser(t.company.id, 'EMPLOYEE');
+    expect((await request(app).post(`/api/agents/${a.id}/credentials`).set(auth(emp.token)).send({ email: 'x@y.zz' })).status).toBe(403);
+  });
+
   it('interdit à un administrateur de se désactiver lui-même', async () => {
     const t = await makeTenant();
     await prisma.agentProfile.create({ data: { userId: t.admin.user.id, companyId: t.company.id, matricule: 'ADM1' } });

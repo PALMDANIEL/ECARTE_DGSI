@@ -8,6 +8,8 @@ export const RULE_DEFAULTS: Record<string, { value: number | string | boolean; d
   'access.pin_length': { value: 6, description: 'Longueur du PIN agent' },
   'access.pin_max_attempts': { value: 5, description: 'Échecs de PIN avant verrouillage' },
   'access.pin_lock_minutes': { value: 15, description: 'Durée de verrouillage après échecs de PIN (minutes)' },
+  'leave.annual_days': { value: 30, description: 'Droit annuel au congé administratif (jours consécutifs) — loi 081-2015/CNT, art. 53' },
+  'absence.hours_per_day': { value: 8, description: 'Heures par jour pour convertir une absence en heures en jours' },
   'access.session_minutes': { value: 20, description: 'Durée de la session agent après scan + PIN (minutes)' }
 };
 

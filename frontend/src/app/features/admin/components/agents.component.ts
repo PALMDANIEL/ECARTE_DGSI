@@ -40,6 +40,7 @@ import { downloadBlob } from '../download';
               <td class="ec-cell-actions">
                 <button class="ec-icon-btn" (click)="openEdit(a)" title="Modifier"><i class="pi pi-pencil"></i></button>
                 <button class="ec-icon-btn" (click)="resetPin(a)" title="Générer un nouveau PIN"><i class="pi pi-key"></i></button>
+                <button class="ec-icon-btn" (click)="openCreds(a)" title="Accès de connexion (responsables)"><i class="pi pi-sign-in"></i></button>
                 <button class="ec-icon-btn" (click)="toggleActive(a)" [title]="a.isActive ? 'Désactiver' : 'Réactiver'"><i class="pi" [class.pi-lock]="a.isActive" [class.pi-lock-open]="!a.isActive"></i></button>
               </td>
             </tr>
@@ -97,6 +98,16 @@ import { downloadBlob } from '../download';
         </form>
       </p-dialog>
 
+      <p-dialog header="Accès de connexion" [(visible)]="showCreds" [modal]="true" [style]="{ width: '30rem' }">
+        <p *ngIf="credAgent">Pour <b>{{ credAgent.firstName }} {{ credAgent.lastName }}</b>. Nécessaire aux responsables qui traitent des demandes (avis, décisions).</p>
+        <div class="p-field"><label>Email de connexion *</label><input pInputText type="email" [(ngModel)]="credEmail" /></div>
+        <div class="p-field" style="margin-top:8px"><label>Mot de passe (laisser vide pour en générer un)</label><input pInputText type="text" [(ngModel)]="credPassword" placeholder="8 caractères minimum" /></div>
+        <div class="ec-error-box" *ngIf="credError" style="margin-top:10px">{{ credError }}</div>
+        <div class="ec-info-box" *ngIf="credResult" style="margin-top:10px">Accès créé : <b>{{ credResult.email }}</b><br />Mot de passe temporaire : <span class="ec-mono-text">{{ credResult.temporaryPassword || '(celui que vous avez saisi)' }}</span><br /><small>Affiché une seule fois — à communiquer à l'agent, qui pourra le changer dans « Mon compte ».</small></div>
+        <div class="ec-form-actions"><button pButton type="button" label="Fermer" class="p-button-text" (click)="showCreds = false"></button>
+          <button pButton type="button" label="Créer l'accès" icon="pi pi-check" [disabled]="!credEmail || !!credResult" (click)="saveCreds()"></button></div>
+      </p-dialog>
+
       <p-dialog header="Nouveau code PIN" [(visible)]="showPin" [modal]="true" [style]="{ width: '26rem' }">
         <p>PIN de <b>{{ pinAgent }}</b> — à remettre en main propre à l'agent :</p>
         <div style="text-align:center; font-family: var(--ec-font-mono); font-size: 2.2rem; letter-spacing: .3em; padding: 16px 0">{{ pin }}</div>
@@ -116,6 +127,7 @@ export class AgentsComponent implements OnInit {
   search$ = new Subject<string>();
   showDialog = false; editing: Agent | null = null; error = '';
   showPin = false; pin = ''; pinAgent = '';
+  showCreds = false; credAgent: Agent | null = null; credEmail = ''; credPassword = ''; credError = ''; credResult: { email: string; temporaryPassword: string | null } | null = null;
 
   form = this.fb.group({
     matricule: ['', Validators.required], civility: [''], lastName: ['', Validators.required], firstName: ['', Validators.required],
@@ -184,6 +196,19 @@ export class AgentsComponent implements OnInit {
         next: r => { this.pin = r.pin; this.pinAgent = `${a.firstName} ${a.lastName}`; this.showPin = true; this.load(); },
         error: err => this.messages.add({ severity: 'error', summary: 'Erreur', detail: err.error?.message || 'Impossible de générer le PIN' })
       })
+    });
+  }
+
+  openCreds(a: Agent) {
+    this.credAgent = a; this.credEmail = a.email.endsWith('@agents.invalid') ? '' : a.email; this.credPassword = ''; this.credError = ''; this.credResult = null; this.showCreds = true;
+  }
+
+  saveCreds() {
+    if (!this.credAgent) return;
+    this.credError = '';
+    this.api.setCredentials(this.credAgent.id, this.credEmail, this.credPassword || undefined).subscribe({
+      next: r => { this.credResult = r; this.load(); },
+      error: err => { this.credError = err.error?.message || (err.error?.errors ? 'Email invalide' : 'Création impossible'); }
     });
   }
 

@@ -167,6 +167,24 @@ export class AgentService {
     return { pin };
   }
 
+  /**
+   * Crée l'accès de connexion d'un agent (nécessaire aux responsables qui traitent les demandes).
+   * Sans mot de passe fourni, un mot de passe temporaire est généré ; il n'est renvoyé qu'une fois.
+   */
+  async setCredentials(companyId: string, userId: string, input: { email: string; password?: string }, actor: Actor, req?: any) {
+    const user = await prisma.user.findFirst({ where: { id: userId, companyId, agentProfile: { isNot: null } } });
+    if (!user) throw new AppError('Agent introuvable', 404);
+    const email = input.email.trim().toLowerCase();
+    const clash = await prisma.user.findFirst({ where: { email, NOT: { id: userId } } });
+    if (clash) throw new AppError('Cet email est déjà utilisé', 409);
+    if (input.password !== undefined && input.password.length < 8) throw new AppError('Le mot de passe doit contenir au moins 8 caractères', 400);
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    const generated = input.password ? null : Array.from({ length: 12 }, () => alphabet[crypto.randomInt(0, alphabet.length)]).join('');
+    await prisma.user.update({ where: { id: userId }, data: { email, password: await bcrypt.hash(input.password ?? generated!, 10), isVerified: true, failedAttempts: 0, lockUntil: null } });
+    await auditService.log({ companyId, actor, action: 'AGENT_CREDENTIALS_SET', entity: 'Agent', entityId: userId, after: { email, passwordGenerated: !!generated }, req });
+    return { email, temporaryPassword: generated };
+  }
+
   async setActive(companyId: string, userId: string, isActive: boolean, actor: Actor, req?: any) {
     const user = await prisma.user.findFirst({ where: { id: userId, companyId, agentProfile: { isNot: null } } });
     if (!user) throw new AppError('Agent introuvable', 404);

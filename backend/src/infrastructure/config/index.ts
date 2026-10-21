@@ -14,6 +14,8 @@ export const config = {
   qrBaseUrl: process.env.QR_BASE_URL || 'http://localhost:4200/card/',
   // Clé de chiffrement des jetons QR (AES-256-GCM). À définir en production ; à défaut dérivée de JWT_SECRET.
   cardTokenKey: process.env.CARD_TOKEN_KEY || process.env.JWT_SECRET || 'default_secret',
+  // Stockage privé (PDF des demandes, pièces jointes) : en dehors de /uploads, jamais servi statiquement.
+  privateStorageDir: process.env.PRIVATE_STORAGE_DIR || require('path').join(process.cwd(), 'private-storage'),
   accessBaseUrl: process.env.ACCESS_BASE_URL || ((process.env.FRONTEND_URL || 'http://localhost:4200') + '/q/'),
   maxFailedAttempts: parseInt(process.env.MAX_FAILED_ATTEMPTS || '5', 10),
   lockDuration: parseInt(process.env.LOCK_DURATION || '900000', 10),

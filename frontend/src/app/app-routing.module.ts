@@ -20,6 +20,7 @@ const routes: Routes = [
       { path: 'cards', loadChildren: () => import('./features/cards/cards.module').then(m => m.CardsModule) },
       { path: 'account', loadChildren: () => import('./features/account/account.module').then(m => m.AccountModule) },
       { path: 'admin', canActivate: [RoleGuard], data: { roles: ['ADMIN', 'SUPER_ADMIN'] }, loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule) },
+      { path: 'requests', loadChildren: () => import('./features/requests/requests.module').then(m => m.RequestsModule) },
       { path: 'users', loadChildren: () => import('./features/users/users.module').then(m => m.UsersModule) },
       { path: 'companies', loadChildren: () => import('./features/companies/companies.module').then(m => m.CompaniesModule) },
       { path: 'teams', loadChildren: () => import('./features/teams/teams.module').then(m => m.TeamsModule) },

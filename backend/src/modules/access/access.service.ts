@@ -107,8 +107,7 @@ export class AccessService {
         supervisor: p.supervisor ? `${p.supervisor.firstName} ${p.supervisor.lastName}` : null
       },
       card: { number: card.cardNumber, expiresAt: card.expiresAt },
-      // Les démarches (congé, jouissance, absence) seront ajoutées avec le moteur de demandes (phase 2)
-      services: [] as { code: string; label: string }[]
+      services: [] as { code: string; label: string }[] // détail des démarches : GET /access/services
     };
   }
 }

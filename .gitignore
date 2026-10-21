@@ -5,3 +5,6 @@ logs
 uploads
 *.log
 .DS_Store
+
+# Documents administratifs privés (PDF des demandes, pièces jointes) : jamais publics, jamais versionnés
+private-storage
