@@ -10,6 +10,8 @@ import { CsvImportComponent } from './components/csv-import.component';
 import { CircuitsComponent } from './components/circuits.component';
 import { AbsenceTypesComponent } from './components/absence-types.component';
 import { TemplatesComponent } from './components/templates.component';
+import { LeaveBalancesComponent } from './components/leave-balances.component';
+import { HolidaysComponent } from './components/holidays.component';
 
 const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'agents' },
@@ -19,12 +21,14 @@ const routes: Routes = [
   { path: 'circuits', component: CircuitsComponent },
   { path: 'absences', component: AbsenceTypesComponent },
   { path: 'modeles', component: TemplatesComponent },
+  { path: 'droits', component: LeaveBalancesComponent },
+  { path: 'feries', component: HolidaysComponent },
   { path: 'audit', component: AuditComponent },
   { path: 'parametres', component: RulesComponent }
 ];
 
 @NgModule({
-  declarations: [OrganisationComponent, PositionsComponent, AgentsComponent, AuditComponent, RulesComponent, CsvImportComponent, CircuitsComponent, AbsenceTypesComponent, TemplatesComponent],
+  declarations: [OrganisationComponent, PositionsComponent, AgentsComponent, AuditComponent, RulesComponent, CsvImportComponent, CircuitsComponent, AbsenceTypesComponent, TemplatesComponent, LeaveBalancesComponent, HolidaysComponent],
   imports: [SharedModule, RouterModule.forChild(routes)]
 })
 export class AdminModule {}

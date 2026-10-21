@@ -8,6 +8,7 @@ import { agentJwtSecret } from '../../shared/utils/crypto';
 import { accessService, AgentSession } from './access.service';
 import { prisma } from '../../database/client';
 import { requestService } from '../requests/request.service';
+import { leaveService } from '../leave/leave.service';
 import { attachmentUpload, sendFile, sendPdf, sniffMime } from '../requests/routes';
 
 class PinDto { @IsString() @Length(4, 12, { message: 'PIN invalide' }) pin!: string; }
@@ -58,6 +59,11 @@ router.get('/services', authenticateAgent, agentContext, asyncHandler(async (req
 router.get('/decisions', authenticateAgent, agentContext, asyncHandler(async (req, res) => res.json(await requestService.availableDecisions(req.agentCtx.agentId, req.agentCtx.companyId))));
 router.get('/absence-types', authenticateAgent, agentContext, asyncHandler(async (req, res) => {
   res.json(await prisma.absenceType.findMany({ where: { companyId: req.agentCtx.companyId, isActive: true }, orderBy: { name: 'asc' }, select: { id: true, code: true, name: true, unit: true, annualCap: true } }));
+}));
+router.get('/balance', authenticateAgent, agentContext, asyncHandler(async (req, res) => res.json(await leaveService.overview(req.agentCtx.agentId, parseInt(String(req.query.year), 10) || new Date().getUTCFullYear()))));
+router.post('/requests/preview', authenticateAgent, agentContext, asyncHandler(async (req, res) => {
+  const dto = await parseDto(FieldsDto, req.body);
+  res.json(await requestService.preview(req.agentCtx.agentId, req.agentCtx.companyId, dto.typeCode, dto.fields));
 }));
 router.get('/requests', authenticateAgent, agentContext, asyncHandler(async (req, res) => res.json(await requestService.agentList(req.agentCtx.agentId))));
 router.post('/requests', authenticateAgent, agentContext, asyncHandler(async (req, res) => {

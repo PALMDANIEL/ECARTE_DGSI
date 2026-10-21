@@ -24,4 +24,9 @@ router.put('/rules/:key', authorize('ADMIN', 'SUPER_ADMIN'), asyncHandler(async 
   res.json(created);
 }));
 
+router.delete('/rules/:key', authorize('ADMIN', 'SUPER_ADMIN'), asyncHandler(async (req, res) => {
+  await rulesService.clearOverride(req.user.companyId, req.params.key, { id: req.user.id, email: req.user.email }, req);
+  res.status(204).send();
+}));
+
 export { router as settingsRouter };

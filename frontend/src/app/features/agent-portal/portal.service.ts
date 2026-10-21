@@ -27,6 +27,14 @@ export interface PortalRequest {
 export interface LeaveDecisionOption { id: string; number: string; year: number; issuedAt: string; days: number; remainingDays: number; }
 export interface AbsenceTypeOption { id: string; code: string; name: string; unit: 'JOUR' | 'HEURE' | 'BOTH'; annualCap: number | null; }
 
+export interface PortalBalance {
+  year: number;
+  entitlement: { eligible: boolean; reason: string | null; eligibleFrom: string | null; days: number };
+  annual: { acquired: number; carriedOver: number; adjustments: number; consumed: number; remaining: number; decided: number; takeable: number };
+  absences: { code: string; name: string; cap: number | null; consumed: number; reserved: number; remaining: number | null }[];
+}
+export interface PreviewResult { ok: boolean; errors: Record<string, string>; info: Record<string, any>; }
+
 /** Parcours agent : le jeton agent (QR + PIN) est distinct du jeton d'administration et n'est jamais mélangé avec lui. */
 @Injectable({ providedIn: 'root' })
 export class PortalService {
@@ -41,6 +49,8 @@ export class PortalService {
   sessionToken: string | null = null;
   private opts() { return { headers: new HttpHeaders({ Authorization: `Bearer ${this.sessionToken}` }) }; }
 
+  balance() { return this.http.get<PortalBalance>(`${this.api}/balance`, this.opts()); }
+  preview(typeCode: string, fields: Record<string, any>) { return this.http.post<PreviewResult>(`${this.api}/requests/preview`, { typeCode, fields }, this.opts()); }
   services() { return this.http.get<PortalService_[]>(`${this.api}/services`, this.opts()); }
   decisions() { return this.http.get<LeaveDecisionOption[]>(`${this.api}/decisions`, this.opts()); }
   absenceTypes() { return this.http.get<AbsenceTypeOption[]>(`${this.api}/absence-types`, this.opts()); }

@@ -56,6 +56,13 @@ enum StepResult {
   SKIPPED
 }
 
+enum LedgerNature {
+  ACQUIS
+  REPORT
+  CONSOMME
+  REGULARISATION
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -88,6 +95,8 @@ model Company {
   requests       Request[]
   formTemplates  FormTemplate[]
   leaveDecisions LeaveDecision[]
+  leaveLedger    LeaveLedger[]
+  holidays       Holiday[]
 
   @@map("companies")
 }
@@ -140,6 +149,7 @@ model User {
   leaveDecisions      LeaveDecision[]
   stepsAssigned       RequestStep[]    @relation("StepAssignee")
   stepsActed          RequestStep[]    @relation("StepActor")
+  leaveLedger         LeaveLedger[]    @relation("LedgerAgent")
 
   @@unique([email, companyId])
   @@index([companyId])
@@ -631,4 +641,42 @@ model FormTemplate {
 
   @@unique([companyId, typeCode, version])
   @@map("form_templates")
+}
+
+// ======================= Module demandes administratives — phase 3 : droits et soldes =======================
+
+/// Registre des droits : écriture seule (un déclencheur PostgreSQL interdit UPDATE et DELETE).
+/// Les corrections se font par écritures de régularisation, jamais par modification.
+model LeaveLedger {
+  id           String       @id @default(cuid())
+  companyId    String
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  agentId      String
+  agent        User         @relation("LedgerAgent", fields: [agentId], references: [id], onDelete: Restrict)
+  leaveType    String
+  year         Int
+  nature       LedgerNature
+  days         Float
+  requestId    String?
+  decisionId   String?
+  reason       String?
+  ruleSnapshot Json?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+
+  @@index([agentId, leaveType, year])
+  @@index([requestId])
+  @@map("leave_ledger")
+}
+
+model Holiday {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  label     String
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, date])
+  @@map("holidays")
 }

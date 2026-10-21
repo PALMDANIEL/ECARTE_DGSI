@@ -12,6 +12,7 @@ import { ensureDefaults } from './request-defaults';
 import { validateFields, usedDays } from './request-fields';
 import { workflowService } from './workflow.service';
 import { logger } from '../../infrastructure/logger';
+import { LEAVE_TYPE, leaveService } from '../leave/leave.service';
 
 type Actor = { id: string; email?: string };
 export type ActAction = 'FAVORABLE' | 'UNFAVORABLE' | 'APPROVE' | 'REJECT' | 'RETURN';
@@ -53,6 +54,17 @@ export class RequestService {
     const r = await prisma.request.findFirst({ where: { id: requestId, agentId }, include: { type: true } });
     if (!r) throw new AppError('Demande introuvable', 404);
     return r;
+  }
+
+  /** Aperçu pour l'agent (sans rien enregistrer) : erreurs par champ, ou durée décomptée, droit et plafonds. */
+  async preview(agentId: string, companyId: string, typeCode: string, fields: Record<string, any>) {
+    try {
+      const { info } = await validateFields({ companyId, agentId, typeCode, fields });
+      return { ok: true, errors: {}, info: info ?? {} };
+    } catch (e) {
+      if (e instanceof AppError && e.code === 'VALIDATION') return { ok: false, errors: (e.details?.errors as Record<string, string>) ?? {}, info: {} };
+      throw e;
+    }
   }
 
   // ------------------------------------------------------------ services agent
@@ -233,9 +245,21 @@ export class RequestService {
       }
 
       let issuedDecision: { id: string; number: string } | null = null;
-      if (status === 'APPROVED' && request.type.code === 'DECISION_CONGE') {
-        const days = await rulesService.get<number>(request.companyId, 'leave.annual_days');
-        issuedDecision = await tx.leaveDecision.create({ data: { companyId: request.companyId, agentId: request.agentId, number: decisionNumber!, year: (request.data as any).year, days, requestId: request.id }, select: { id: true, number: true } });
+      if (status === 'APPROVED') {
+        const d: any = request.data;
+        if (request.type.code === 'DECISION_CONGE') {
+          // Les jours ouverts viennent du droit réel de l'agent (éligibilité, règles en vigueur), plus d'une valeur fixe
+          const days = await leaveService.decisionCapacity(tx, request.agentId, d.year);
+          if (days <= 0) throw new AppError(`Aucun jour de congé n'est ouvert pour ${d.year} : décision impossible`, 409, 'NO_ENTITLEMENT');
+          issuedDecision = await tx.leaveDecision.create({ data: { companyId: request.companyId, agentId: request.agentId, number: decisionNumber!, year: d.year, days, requestId: request.id }, select: { id: true, number: true } });
+        } else if (request.type.code === 'JOUISSANCE_CONGE') {
+          await leaveService.consume(tx, { companyId: request.companyId, agentId: request.agentId, leaveType: LEAVE_TYPE, year: d.year, days: Number(d.durationDays) || 0, requestId: request.id, decisionId: request.leaveDecisionId, reason: `Jouissance du ${d.startDate} au ${d.endDate}`, snapshot: { countMode: 'rules-at-validation' }, createdById: user.id });
+        } else if (request.type.code === 'AUTORISATION_ABSENCE') {
+          const type = await tx.absenceType.findUnique({ where: { id: d.absenceTypeId } });
+          for (const [yr, days] of Object.entries((d.daysByYear || {}) as Record<string, number>)) {
+            await leaveService.consume(tx, { companyId: request.companyId, agentId: request.agentId, leaveType: type?.code ?? 'ABSENCE', year: Number(yr), days: Number(days), requestId: request.id, reason: `Absence du ${d.startDate} au ${d.endDate}`, createdById: user.id });
+          }
+        }
       }
       await tx.request.update({ where: { id: requestId }, data: { status, ...(['APPROVED', 'REJECTED'].includes(status) ? { closedAt: now } : {}) } });
       return { request, active, result, status, nextStepId, issuedDecision, comment };

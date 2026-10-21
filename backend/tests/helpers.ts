@@ -9,7 +9,11 @@ export { app, prisma, request };
 
 export async function resetDb() {
   const tables = await prisma.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
-  await prisma.$executeRawUnsafe(`TRUNCATE ${tables.map(t => `"${t.tablename}"`).join(', ')} RESTART IDENTITY CASCADE`);
+  // Un enregistrement asynchrone du test précédent (ex. scan) peut encore tenir un verrou : on retente en cas d'interblocage
+  for (let attempt = 0; ; attempt++) {
+    try { await prisma.$executeRawUnsafe(`TRUNCATE ${tables.map(t => `"${t.tablename}"`).join(', ')} RESTART IDENTITY CASCADE`); return; }
+    catch (e: any) { if (attempt >= 4 || !/deadlock|40P01/i.test(String(e?.message))) throw e; await new Promise(r => setTimeout(r, 300)); }
+  }
 }
 
 let counter = 0;

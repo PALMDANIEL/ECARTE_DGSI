@@ -28,7 +28,24 @@ export interface Agent {
 }
 export interface ImportReport { dryRun: boolean; total: number; created: number; updated: number; errors: { line: number; message: string }[]; }
 export interface AuditEntry { id: string; seq: number; actorEmail: string | null; action: string; entity: string; entityId: string | null; before: unknown; after: unknown; ip: string | null; createdAt: string; }
-export interface RuleParam { key: string; description: string; defaultValue: number | string | boolean; value: number | string | boolean; isCustom: boolean; legalReference: string | null; history: { id: string; value: unknown; validFrom: string; validTo: string | null; legalReference?: string; comment?: string }[]; }
+export interface RuleParam {
+  key: string; group: string; type: 'number' | 'boolean' | 'string' | 'enum'; options: { value: string; label: string }[] | null; min: number | null; description: string;
+  defaultValue: number | string | boolean; value: number | string | boolean; isCustom: boolean; legalReference: string | null;
+  history: { id: string; value: unknown; validFrom: string; validTo: string | null; legalReference?: string; comment?: string }[];
+}
+export interface RuleOverride { key: string; baseKey: string; regime: string; description: string; value: unknown; }
+export interface RulesPayload { rules: RuleParam[]; overrides: RuleOverride[]; regimes: string[]; }
+
+export interface LedgerEntry { id: string; leaveType: string; year: number; nature: 'ACQUIS' | 'REPORT' | 'CONSOMME' | 'REGULARISATION'; days: number; reason: string | null; createdAt: string; }
+export interface LeaveOverview {
+  year: number;
+  entitlement: { eligible: boolean; reason: string | null; serviceStart: string | null; eligibleFrom: string | null; days: number; period: { from: string; to: string } };
+  annual: { acquired: number; carriedOver: number; adjustments: number; consumed: number; remaining: number; decided: number; takeable: number };
+  decisions: { id: string; number: string; days: number; status: string; issuedAt: string }[];
+  absences: { code: string; name: string; cap: number | null; consumed: number; reserved: number; remaining: number | null; legalReference: string | null }[];
+}
+export interface HolidayDef { id: string; date: string; label: string; }
+export interface LeaveControl { type: string; agentId: string; label: string; detail: string; }
 
 export type StepKind = 'AVIS' | 'VISA' | 'TRAITEMENT' | 'DECISION';
 export type StepResolution = 'POSITION' | 'SUPERVISOR_LEVEL' | 'UNIT_TYPE_HEAD';
@@ -103,6 +120,20 @@ export class AdminApiService {
     return this.http.get<{ items: AuditEntry[]; total: number; page: number; limit: number }>(`${this.api}/audit`, { params: p });
   }
   verifyAudit() { return this.http.get<{ ok: boolean; checked: number; brokenAtSeq?: number }>(`${this.api}/audit/verify`); }
-  rules() { return this.http.get<RuleParam[]>(`${this.api}/settings/rules`); }
+  rules() { return this.http.get<RulesPayload>(`${this.api}/settings/rules`); }
   setRule(key: string, body: { value: unknown; validFrom?: string; legalReference?: string; comment?: string }) { return this.http.put(`${this.api}/settings/rules/${key}`, body); }
+  clearOverride(key: string) { return this.http.delete<void>(`${this.api}/settings/rules/${key}`); }
+
+  // Droits, soldes et jours fériés
+  leaveOverview(agentId: string, year: number) { return this.http.get<LeaveOverview>(`${this.api}/leave/agents/${agentId}/overview?year=${year}`); }
+  leaveLedger(agentId: string, year: number) { return this.http.get<LedgerEntry[]>(`${this.api}/leave/agents/${agentId}/ledger?year=${year}`); }
+  regularise(body: { agentId: string; leaveType: string; year: number; days: number; reason: string }) { return this.http.post(`${this.api}/leave/regularisations`, body); }
+  importAdjustments(csv: string, dryRun: boolean) { return this.http.post<ImportReport>(`${this.api}/leave/adjustments/import`, { csv, dryRun }); }
+  adjustmentsTemplate() { return this.http.get(`${this.api}/leave/adjustments/template`, { responseType: 'blob' }); }
+  leaveControls() { return this.http.get<LeaveControl[]>(`${this.api}/leave/controls`); }
+  cancelDecision(id: string, reason: string) { return this.http.post(`${this.api}/leave/decisions/${id}/cancel`, { reason }); }
+  holidays(year?: number) { return this.http.get<HolidayDef[]>(`${this.api}/holidays${year ? '?year=' + year : ''}`); }
+  createHoliday(date: string, label: string) { return this.http.post<HolidayDef>(`${this.api}/holidays`, { date, label }); }
+  deleteHoliday(id: string) { return this.http.delete<void>(`${this.api}/holidays/${id}`); }
+  importHolidays(csv: string, dryRun: boolean) { return this.http.post<ImportReport>(`${this.api}/holidays/import`, { csv, dryRun }); }
 }

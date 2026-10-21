@@ -54,6 +54,8 @@ export class MainLayoutComponent {
     { label: 'Agents', icon: 'pi pi-id-card', link: '/admin/agents', roles: ['SUPER_ADMIN', 'ADMIN'], group: 'Administration' },
     { label: 'Organisation', icon: 'pi pi-sitemap', link: '/admin/organisation', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Postes', icon: 'pi pi-briefcase', link: '/admin/postes', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Droits et soldes', icon: 'pi pi-wallet', link: '/admin/droits', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Jours fériés', icon: 'pi pi-calendar', link: '/admin/feries', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Circuits', icon: 'pi pi-share-alt', link: '/admin/circuits', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Types d\'absence', icon: 'pi pi-calendar-minus', link: '/admin/absences', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Modèles PDF', icon: 'pi pi-file-pdf', link: '/admin/modeles', roles: ['SUPER_ADMIN', 'ADMIN'] },

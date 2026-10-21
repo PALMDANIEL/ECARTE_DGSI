@@ -1,5 +1,6 @@
-import { Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { AbsenceTypeOption, LeaveDecisionOption, PortalRequest, PortalService, PortalService_ } from '../portal.service';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
+import { Subject, Subscription, debounceTime } from 'rxjs';
+import { AbsenceTypeOption, LeaveDecisionOption, PortalBalance, PortalRequest, PortalService, PortalService_, PreviewResult } from '../portal.service';
 
 type View = 'home' | 'form' | 'attachments' | 'detail';
 
@@ -15,6 +16,19 @@ const RESULT: Record<string, string> = { PENDING: 'En attente', FAVORABLE: 'Avis
 
     <!-- ACCUEIL -->
     <div *ngIf="view === 'home'">
+      <div class="pr-balance" *ngIf="balance">
+        <h3 style="margin-top:6px">Mon solde {{ balance.year }}</h3>
+        <div class="pr-warn" *ngIf="!balance.entitlement.eligible">{{ balance.entitlement.reason }}</div>
+        <div class="pr-bal-row" *ngIf="balance.entitlement.eligible">
+          <div><b>{{ balance.annual.remaining }}</b><small>jours de congé restants</small></div>
+          <div><b>{{ balance.annual.consumed }}</b><small>pris</small></div>
+          <div><b>{{ balance.annual.takeable }}</b><small>à prendre (décision)</small></div>
+        </div>
+        <div class="pr-hint" *ngFor="let a of balance.absences">
+          <ng-container *ngIf="a.cap !== null">{{ a.name }} : <b>{{ a.remaining }}</b> jour(s) restant(s) sur {{ a.cap }}</ng-container>
+        </div>
+      </div>
+
       <h3>Mes démarches</h3>
       <button *ngFor="let s of services" class="pr-service" [disabled]="!s.available" (click)="start(s)">
         <span>{{ s.name }}</span>
@@ -31,7 +45,7 @@ const RESULT: Record<string, string> = { PENDING: 'En attente', FAVORABLE: 'Avis
     </div>
 
     <!-- FORMULAIRE -->
-    <form *ngIf="view === 'form' && current" (ngSubmit)="save()">
+    <form *ngIf="view === 'form' && current" (ngSubmit)="save()" (input)="change$.next()" (change)="change$.next()">
       <button type="button" class="pr-back" (click)="home()"><i class="pi pi-arrow-left"></i> Retour</button>
       <h3>{{ typeName() }}</h3>
       <p class="pr-hint">Les informations vous concernant (identité, matricule, affectation, supérieurs) sont reprises automatiquement dans le document.</p>
@@ -100,6 +114,8 @@ const RESULT: Record<string, string> = { PENDING: 'En attente', FAVORABLE: 'Avis
         </ng-container>
       </ng-container>
 
+      <div class="pr-info" *ngFor="let l of pvLines()">{{ l }}</div>
+      <div class="pr-error" *ngFor="let m of pvErrors()">{{ m }}</div>
       <button type="submit" class="pr-btn" [disabled]="busy">{{ busy ? 'Vérification…' : 'Continuer' }}</button>
     </form>
 
@@ -158,6 +174,8 @@ const RESULT: Record<string, string> = { PENDING: 'En attente', FAVORABLE: 'Avis
     .pr-badge.ok { background: #EAF6F6; color: var(--ec-teal); } .pr-badge.warn { background: #FBF3E3; color: #9A7421; } .pr-badge.bad { background: #FBEAEA; color: var(--ec-coral); }
     .pr-error { padding: 10px 12px; background: #FBEAEA; color: var(--ec-coral); border-radius: 10px; font-size: .88rem; margin: 10px 0; }
     .pr-info { padding: 10px 12px; background: #EAF6F6; color: #0B6B6D; border-radius: 10px; font-size: .85rem; margin: 12px 0; }
+    .pr-balance { padding: 4px 14px 10px; background: #FAFAF8; border: 1px solid var(--ec-line); border-radius: 12px; margin-bottom: 8px; }
+    .pr-bal-row { display: flex; gap: 8px; margin: 6px 0 8px; } .pr-bal-row div { flex: 1; text-align: center; } .pr-bal-row b { display: block; font-size: 1.5rem; font-family: var(--ec-font-display); } .pr-bal-row small { font-size: .7rem; color: var(--ec-ink-soft); }
     .pr-ok { padding: 10px 12px; background: #EAF6F6; color: #0B6B6D; border-radius: 10px; font-size: .9rem; margin: 10px 0; }
     .pr-warn { padding: 10px 12px; background: #FBF3E3; color: #7a5a16; border-radius: 10px; font-size: .88rem; margin: 10px 0; }
     .pr-dl { display: grid; grid-template-columns: 1fr 1.6fr; gap: 6px 12px; font-size: .88rem; } .pr-dl dt { color: var(--ec-ink-soft); } .pr-dl dd { margin: 0; font-weight: 500; }
@@ -167,7 +185,7 @@ const RESULT: Record<string, string> = { PENDING: 'En attente', FAVORABLE: 'Avis
     .pr-upload { display: inline-block; margin-top: 6px; color: var(--ec-teal); font-weight: 600; cursor: pointer; font-size: .88rem; }
   `]
 })
-export class PortalRequestsComponent implements OnInit {
+export class PortalRequestsComponent implements OnInit, OnDestroy {
   @Output() expired = new EventEmitter<void>();
 
   view: View = 'home';
@@ -186,7 +204,51 @@ export class PortalRequestsComponent implements OnInit {
 
   constructor(private portal: PortalService) {}
 
-  ngOnInit() { this.home(); }
+  balance: PortalBalance | null = null;
+  pv: PreviewResult | null = null;
+  change$ = new Subject<void>();
+  private sub = new Subscription();
+
+  ngOnInit() {
+    // Aperçu pendant la saisie : durée décomptée, droit ouvert, plafonds restants (rien n'est enregistré)
+    this.sub.add(this.change$.pipe(debounceTime(600)).subscribe(() => this.runPreview()));
+    this.home();
+  }
+  ngOnDestroy() { this.sub.unsubscribe(); }
+
+  private runPreview() {
+    if (this.view !== 'form') return;
+    const fields = this.cleanFields();
+    this.portal.preview(this.typeCode, fields).subscribe({ next: r => (this.pv = r), error: () => (this.pv = null) });
+  }
+
+  /** Champs à envoyer : on retire ceux qui ne s'appliquent pas selon les cases cochées. */
+  private cleanFields() {
+    const fields = { ...this.f };
+    if (this.typeCode === 'AUTORISATION_ABSENCE') {
+      if (!this.multiDay) delete fields['endDate'];
+      if (!(this.unit() === 'HEURE' || this.inHours)) delete fields['durationHours'];
+    }
+    return fields;
+  }
+
+  /** Messages d'aperçu : uniquement pour les champs déjà renseignés (pas d'erreur sur un formulaire encore vide). */
+  pvErrors(): string[] {
+    if (!this.pv || this.pv.ok) return [];
+    return Object.entries(this.pv.errors).filter(([k]) => this.f[k] !== undefined && this.f[k] !== '' && this.f[k] !== null).map(([, m]) => m);
+  }
+
+  pvLines(): string[] {
+    if (!this.pv?.ok) return [];
+    const i: any = this.pv.info, out: string[] = [];
+    if (this.typeCode === 'DECISION_CONGE' && i.entitlementDays) out.push(`Droit ouvert pour ${this.f['year']} : ${i.entitlementDays} jours.`);
+    if (this.typeCode === 'JOUISSANCE_CONGE' && i.durationDays) out.push(`Durée décomptée : ${i.durationDays} jour(s) — tranche ${i.fraction}/${i.maxFractions}, il restera ${i.remainingAfter} jour(s) sur la décision.`);
+    if (this.typeCode === 'AUTORISATION_ABSENCE' && i.durationDays) {
+      out.push(`Durée décomptée : ${i.durationDays} jour(s).`);
+      for (const [yr, c] of Object.entries<any>(i.cap || {})) out.push(`Plafond ${yr} : il vous restera ${c.remainingAfter} jour(s) sur ${c.cap}.`);
+    }
+    return out;
+  }
 
   statusLabel(s: string) { return STATUS[s] || s; }
   resultLabel(s: string) { return RESULT[s] || s; }
@@ -202,6 +264,7 @@ export class PortalRequestsComponent implements OnInit {
   home() {
     this.view = 'home'; this.error = ''; this.current = null; this.justSubmitted = false;
     this.portal.services().subscribe({ next: s => (this.services = s), error: e => this.fail(e) });
+    this.portal.balance().subscribe({ next: b => (this.balance = b), error: () => (this.balance = null) });
     this.portal.requests().subscribe({ next: r => (this.requests = r), error: e => this.fail(e) });
   }
 
@@ -210,7 +273,7 @@ export class PortalRequestsComponent implements OnInit {
     this.f = s.code === 'DECISION_CONGE' ? { year: this.years[0] } : {};
     if (s.code === 'JOUISSANCE_CONGE') this.portal.decisions().subscribe({ next: d => { this.decisions = d; if (d.length === 1) this.f['leaveDecisionId'] = d[0].id; }, error: e => this.fail(e) });
     if (s.code === 'AUTORISATION_ABSENCE') this.portal.absenceTypes().subscribe({ next: a => (this.absenceTypes = a), error: e => this.fail(e) });
-    this.view = 'form';
+    this.view = 'form'; this.pv = null;
     this.current = { id: '', type: { code: s.code, name: s.name, attachmentRules: s.attachmentRules }, progress: [], previousRounds: [], documents: [], attachments: [], data: {}, reference: '', status: 'DRAFT', round: 1, submittedAt: null };
   }
 
