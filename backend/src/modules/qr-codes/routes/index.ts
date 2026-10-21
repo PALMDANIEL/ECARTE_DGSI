@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { QRCodeService } from '../services/qr-code.service';
+import { FileService } from '../../files/services/file.service';
+import { authenticate } from '../../../middlewares/auth.middleware';
+const router = Router();
+const fileService = new FileService();
+const qrService = new QRCodeService(fileService);
+router.get('/generate', authenticate, async (req, res) => { const { url } = req.query; if (!url) return res.status(400).json({ message: 'url required' }); try { const png = await qrService.generatePNG(url as string); res.setHeader('Content-Type', 'image/png'); res.send(png); } catch { return res.status(500).json({ message: 'QR failed' }); } });
+router.get('/public/:slug', async (req, res) => { try { const png = await qrService.generatePNG((process.env.QR_BASE_URL || 'http://localhost:4200/card/') + req.params.slug); res.setHeader('Content-Type', 'image/png'); res.send(png); } catch { return res.status(500).json({ message: 'QR failed' }); } });
+export { router as qrRouter };

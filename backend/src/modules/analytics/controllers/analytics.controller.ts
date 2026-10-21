@@ -1,0 +1,3 @@
+import { Request, Response } from 'express';
+import { AnalyticsService } from '../services/analytics.service';
+export class AnalyticsController { constructor(private service: AnalyticsService) {} async getStatistics(req: Request & { user?: any }, res: Response) { try { return res.json(await this.service.getStatistics(req.user.companyId)); } catch (error: any) { return res.status(400).json({ message: error.message }); } } async getDashboardStats(req: Request & { user?: any }, res: Response) { try { return res.json(await this.service.getDashboardStats(req.user.companyId, req.user.role === 'SUPER_ADMIN')); } catch (error: any) { return res.status(400).json({ message: error.message }); } } }

@@ -1,0 +1,30 @@
+export interface BusinessCard {
+  id: string;
+  slug: string;
+  userId: string;
+  companyId: string;
+  photo?: string;
+  fullName: string;
+  jobTitle?: string;
+  ministry?: string;
+  direction?: string;
+  service?: string;
+  phoneMobile?: string;
+  phoneWork?: string;
+  email?: string;
+  whatsapp?: string;
+  website?: string;
+  linkedin?: string;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+  address?: string;
+  gpsLat?: number;
+  gpsLng?: number;
+  isActive: boolean;
+  isArchived: boolean;
+  qrCodeUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  company?: { name: string };
+}

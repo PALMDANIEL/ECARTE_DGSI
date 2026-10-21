@@ -1,0 +1,18 @@
+import { Router } from 'express';
+import { TeamController } from '../controllers/team.controller';
+import { TeamService } from '../services/team.service';
+import { TeamRepository } from '../repositories/team.repository';
+import { authenticate, authorize } from '../../../middlewares/auth.middleware';
+import { scopeByCompany } from '../../../middlewares/scope';
+const router = Router();
+const repo = new TeamRepository();
+const service = new TeamService(repo);
+const controller = new TeamController(service);
+router.use(authenticate);
+router.param('id', scopeByCompany('team'));
+router.post('/', authorize('ADMIN', 'SUPER_ADMIN'), controller.create.bind(controller));
+router.get('/', controller.findAll.bind(controller));
+router.get('/:id', controller.findOne.bind(controller));
+router.put('/:id', authorize('ADMIN', 'SUPER_ADMIN'), controller.update.bind(controller));
+router.delete('/:id', authorize('ADMIN', 'SUPER_ADMIN'), controller.delete.bind(controller));
+export { router as teamRouter };

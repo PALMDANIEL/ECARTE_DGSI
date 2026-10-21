@@ -1,0 +1,3 @@
+import { PrismaClient, Prisma, Team } from '@prisma/client';
+import { prisma } from '../../../database/client';
+export class TeamRepository { private prisma: PrismaClient; constructor() { this.prisma = prisma; } async create(data: Prisma.TeamCreateInput): Promise<Team> { return this.prisma.team.create({ data }); } async findById(id: string): Promise<Team | null> { return this.prisma.team.findUnique({ where: { id } }); } async findMany(where?: Prisma.TeamWhereInput): Promise<Team[]> { return this.prisma.team.findMany({ where }); } async update(id: string, data: Prisma.TeamUpdateInput): Promise<Team> { return this.prisma.team.update({ where: { id }, data }); } }

@@ -1,0 +1,14 @@
+import { createAction, props } from '@ngrx/store';
+import { Team } from '../../models/team.model';
+export const loadTeams = createAction('[Team] Load Teams');
+export const loadTeamsSuccess = createAction('[Team] Load Teams Success', props<{ teams: Team[] }>());
+export const loadTeamsFailure = createAction('[Team] Load Teams Failure', props<{ error: string }>());
+export const createTeam = createAction('[Team] Create Team', props<{ team: any }>());
+export const createTeamSuccess = createAction('[Team] Create Team Success', props<{ team: Team }>());
+export const createTeamFailure = createAction('[Team] Create Team Failure', props<{ error: string }>());
+export const updateTeam = createAction('[Team] Update Team', props<{ id: string; team: any }>());
+export const updateTeamSuccess = createAction('[Team] Update Team Success', props<{ team: Team }>());
+export const updateTeamFailure = createAction('[Team] Update Team Failure', props<{ error: string }>());
+export const deleteTeam = createAction('[Team] Delete Team', props<{ id: string }>());
+export const deleteTeamSuccess = createAction('[Team] Delete Team Success', props<{ id: string }>());
+export const deleteTeamFailure = createAction('[Team] Delete Team Failure', props<{ error: string }>());

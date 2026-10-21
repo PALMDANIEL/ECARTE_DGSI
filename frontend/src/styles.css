@@ -1,0 +1,39 @@
+@import "primeng/resources/themes/lara-light-blue/theme.css";
+@import "primeng/resources/primeng.css";
+@import "primeicons/primeicons.css";
+@import "primeflex/primeflex.css";
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500;1,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  --ec-ink: #12172B;
+  --ec-ink-soft: #2A3150;
+  --ec-paper: #FAFAF8;
+  --ec-paper-raised: #FFFFFF;
+  --ec-brass: #C89B3C;
+  --ec-brass-soft: #E8D5A0;
+  --ec-teal: #0F8B8D;
+  --ec-coral: #D64545;
+  --ec-line: #E4E1D8;
+  --ec-font-display: 'Fraunces', serif;
+  --ec-font-body: 'Inter', sans-serif;
+  --ec-font-mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--ec-font-body); background: var(--ec-paper); color: var(--ec-ink); -webkit-font-smoothing: antialiased; }
+h1, h2, .ec-display { font-family: var(--ec-font-display); }
+.ec-mono { font-family: var(--ec-font-mono); letter-spacing: 0.04em; }
+
+.p-button { background: var(--ec-ink) !important; border-color: var(--ec-ink) !important; border-radius: 8px !important; font-weight: 600; }
+.p-button:enabled:hover { background: var(--ec-ink-soft) !important; border-color: var(--ec-ink-soft) !important; }
+.p-button.p-button-success { background: var(--ec-teal) !important; border-color: var(--ec-teal) !important; }
+.p-button.p-button-warning { background: var(--ec-brass) !important; border-color: var(--ec-brass) !important; color: var(--ec-ink) !important; }
+.p-button.p-button-danger { background: var(--ec-coral) !important; border-color: var(--ec-coral) !important; }
+.p-button.p-button-text { background: transparent !important; color: var(--ec-ink) !important; }
+.p-card { border-radius: 14px !important; box-shadow: 0 2px 12px rgba(18,23,43,0.06) !important; border: 1px solid var(--ec-line); }
+.p-inputtext { border-radius: 8px !important; border-color: var(--ec-line) !important; }
+.p-inputtext:enabled:focus { border-color: var(--ec-brass) !important; box-shadow: 0 0 0 2px var(--ec-brass-soft) !important; }
+
+.ec-page { padding: 24px; max-width: 1200px; margin: 0 auto; }
+.ec-page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+.ec-page-header h1 { font-size: 2rem; margin: 0; color: var(--ec-ink); }
+.ec-page-header p { font-size: 0.7rem; color: var(--ec-teal); margin: 4px 0 0; }

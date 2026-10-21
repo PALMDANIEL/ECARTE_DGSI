@@ -1,0 +1,18 @@
+import { Router } from 'express';
+import { CompanyController } from '../controllers/company.controller';
+import { CompanyService } from '../services/company.service';
+import { CompanyRepository } from '../repositories/company.repository';
+import { authenticate, authorize } from '../../../middlewares/auth.middleware';
+import { scopeCompanyParam } from '../../../middlewares/scope';
+const router = Router();
+const repo = new CompanyRepository();
+const service = new CompanyService(repo);
+const controller = new CompanyController(service);
+router.use(authenticate);
+router.param('id', scopeCompanyParam);
+router.post('/', authorize('SUPER_ADMIN'), controller.create.bind(controller));
+router.get('/', controller.findAll.bind(controller));
+router.get('/:id', controller.findOne.bind(controller));
+router.put('/:id', authorize('ADMIN', 'SUPER_ADMIN'), controller.update.bind(controller));
+router.delete('/:id', authorize('SUPER_ADMIN'), controller.delete.bind(controller));
+export { router as companyRouter };

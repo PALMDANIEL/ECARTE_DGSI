@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  logo      String?
+  phone     String?
+  email     String?
+  website   String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  teams     Team[]
+  cards     BusinessCard[]
+  @@map("companies")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+  @@index([companyId])
+  @@map("teams")
+}
+
+model User {
+  id             String         @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String         @unique
+  password       String
+  phone          String?
+  photo          String?
+  jobTitle       String?
+  department     String?
+  companyId      String
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teamId         String?
+  team           Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  role           Role           @default(EMPLOYEE)
+  isActive       Boolean        @default(true)
+  isVerified     Boolean        @default(false)
+  refreshToken   String?
+  failedAttempts Int            @default(0)
+  lockUntil      DateTime?
+  lastLogin      DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  cards          BusinessCard[]
+  notifications  Notification[]
+  @@unique([email, companyId])
+  @@index([companyId])
+  @@index([teamId])
+  @@map("users")
+}
+
+model BusinessCard {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  photo       String?
+  fullName    String
+  jobTitle    String?
+  ministry    String?
+  direction   String?
+  service     String?
+  phoneMobile String?
+  phoneWork   String?
+  email       String?
+  whatsapp    String?
+  website     String?
+  linkedin    String?
+  facebook    String?
+  instagram   String?
+  tiktok      String?
+  address     String?
+  gpsLat      Float?
+  gpsLng      Float?
+  isActive    Boolean  @default(true)
+  isArchived  Boolean  @default(false)
+  qrCodeUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  scans       Scan[]
+  @@index([userId])
+  @@index([companyId])
+  @@index([slug])
+  @@map("business_cards")
+}
+
+model Scan {
+  id        String       @id @default(cuid())
+  cardId    String
+  card      BusinessCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  scannedAt DateTime     @default(now())
+  ip        String?
+  country   String?
+  city      String?
+  device    String?
+  os        String?
+  browser   String?
+  referrer  String?
+  createdAt DateTime     @default(now())
+  @@index([cardId])
+  @@index([scannedAt])
+  @@map("scans")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@index([userId])
+  @@map("notifications")
+}
