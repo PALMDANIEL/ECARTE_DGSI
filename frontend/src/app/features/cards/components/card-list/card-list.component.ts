@@ -5,6 +5,8 @@ import { BusinessCard } from '../../../../core/models/business-card.model';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { Observable, map, BehaviorSubject, combineLatest } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
+import { isAdminRole } from '../../../../core/auth/role';
+import { STATUS_LABEL } from '../card-lifecycle/card-lifecycle.component';
 
 @Component({
   selector: 'app-card-list',
@@ -34,6 +36,10 @@ import { environment } from '../../../../../environments/environment';
           </div>
 
           <h3>{{ card.fullName }}</h3>
+          <p class="ec-mono" style="font-size:.68rem; margin:-4px 0 6px" *ngIf="card.status && card.status !== 'PENDING'">
+            <span class="ec-badge" [class.ok]="card.status === 'ACTIVE'" [class.warn]="card.status === 'SUSPENDED' || card.status === 'EXPIRED'" [class.bad]="card.status === 'REVOKED'">{{ statusLabel(card.status) }}</span>
+            <span *ngIf="card.cardNumber" style="margin-left:6px">{{ card.cardNumber }}</span>
+          </p>
           <p class="ec-mono ec-job" *ngIf="card.jobTitle">{{ card.jobTitle | uppercase }}</p>
 
           <div class="ec-org" *ngIf="card.ministry || card.direction || card.service">
@@ -48,7 +54,8 @@ import { environment } from '../../../../../environments/environment';
           </div>
 
           <div class="ec-tile-actions">
-            <button class="ec-tile-btn" (click)="showQR(card)" pTooltip="QR Code (contact direct)" [class.loading]="generatingQrId === card.id">
+            <button class="ec-tile-btn" (click)="manageCard(card)" pTooltip="Carte professionnelle (émission, QR d'accès, révocation…)" *ngIf="isAdmin"><i class="pi pi-id-card"></i></button>
+            <button class="ec-tile-btn" (click)="showQR(card)" pTooltip="QR contact (carte de visite)" [class.loading]="generatingQrId === card.id">
               <i class="pi" [class.pi-qrcode]="generatingQrId !== card.id" [class.pi-spin]="generatingQrId === card.id" [class.pi-spinner]="generatingQrId === card.id"></i>
             </button>
             <button class="ec-tile-btn" (click)="viewCard(card)" pTooltip="Voir la carte"><i class="pi pi-eye"></i></button>
@@ -81,6 +88,7 @@ import { environment } from '../../../../../environments/environment';
         </div>
       </p-dialog>
 
+      <app-card-lifecycle [cardId]="lifecycleCardId" [(visible)]="showLifecycle" (changed)="refresh()"></app-card-lifecycle>
     </div>
   `,
   styles: [`
@@ -160,6 +168,12 @@ export class CardListComponent implements OnInit {
   }
 
   search(event: Event) { this.searchTerm$.next((event.target as HTMLInputElement).value); }
+
+  isAdmin = isAdminRole();
+  lifecycleCardId: string | null = null;
+  showLifecycle = false;
+  statusLabel(s: string) { return STATUS_LABEL[s as keyof typeof STATUS_LABEL] || s; }
+  manageCard(card: BusinessCard) { this.lifecycleCardId = card.id; this.showLifecycle = true; }
 
   viewCard(card: BusinessCard) { window.open(`/card/${card.slug}`, '_blank'); }
   editCard(card: BusinessCard) { this.router.navigate(['/cards', card.id, 'edit']); }

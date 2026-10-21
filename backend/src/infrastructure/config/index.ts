@@ -12,6 +12,9 @@ export const config = {
   email: { host: process.env.EMAIL_HOST || 'smtp.example.com', port: parseInt(process.env.EMAIL_PORT || '587', 10), user: process.env.EMAIL_USER || 'user@example.com', pass: process.env.EMAIL_PASS || 'password' },
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:4200',
   qrBaseUrl: process.env.QR_BASE_URL || 'http://localhost:4200/card/',
+  // Clé de chiffrement des jetons QR (AES-256-GCM). À définir en production ; à défaut dérivée de JWT_SECRET.
+  cardTokenKey: process.env.CARD_TOKEN_KEY || process.env.JWT_SECRET || 'default_secret',
+  accessBaseUrl: process.env.ACCESS_BASE_URL || ((process.env.FRONTEND_URL || 'http://localhost:4200') + '/q/'),
   maxFailedAttempts: parseInt(process.env.MAX_FAILED_ATTEMPTS || '5', 10),
   lockDuration: parseInt(process.env.LOCK_DURATION || '900000', 10),
 };

@@ -7,6 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum CardStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REVOKED
+  EXPIRED
+  REPLACED
+}
+
+enum OrgUnitType {
+  SG
+  DG
+  DIRECTION
+  SERVICE
+  UNITE
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
@@ -15,19 +32,25 @@ enum Role {
 }
 
 model Company {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  logo      String?
-  phone     String?
-  email     String?
-  website   String?
-  address   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  users     User[]
-  teams     Team[]
-  cards     BusinessCard[]
+  id             String          @id @default(cuid())
+  name           String          @unique
+  logo           String?
+  phone          String?
+  email          String?
+  website        String?
+  address        String?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  users          User[]
+  teams          Team[]
+  cards          BusinessCard[]
+  city           String?
+  orgUnits       OrgUnit[]
+  positions      Position[]
+  agentProfiles  AgentProfile[]
+  ruleParameters RuleParameter[]
+
   @@map("companies")
 }
 
@@ -40,35 +63,42 @@ model Team {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   users     User[]
+
   @@index([companyId])
   @@map("teams")
 }
 
 model User {
-  id             String         @id @default(cuid())
-  firstName      String
-  lastName       String
-  email          String         @unique
-  password       String
-  phone          String?
-  photo          String?
-  jobTitle       String?
-  department     String?
-  companyId      String
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  teamId         String?
-  team           Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  role           Role           @default(EMPLOYEE)
-  isActive       Boolean        @default(true)
-  isVerified     Boolean        @default(false)
-  refreshToken   String?
-  failedAttempts Int            @default(0)
-  lockUntil      DateTime?
-  lastLogin      DateTime?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  cards          BusinessCard[]
-  notifications  Notification[]
+  id                  String           @id @default(cuid())
+  firstName           String
+  lastName            String
+  email               String           @unique
+  password            String
+  phone               String?
+  photo               String?
+  jobTitle            String?
+  department          String?
+  companyId           String
+  company             Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  teamId              String?
+  team                Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  role                Role             @default(EMPLOYEE)
+  isActive            Boolean          @default(true)
+  isVerified          Boolean          @default(false)
+  refreshToken        String?
+  failedAttempts      Int              @default(0)
+  lockUntil           DateTime?
+  lastLogin           DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  cards               BusinessCard[]
+  notifications       Notification[]
+  agentProfile        AgentProfile?
+  supervisedAgents    AgentProfile[]   @relation("Supervisor")
+  positionHoldings    PositionHolder[]
+  delegationsReceived Delegation[]     @relation("Delegate")
+  heldCards           BusinessCard[]   @relation("CardHolder")
+
   @@unique([email, companyId])
   @@index([companyId])
   @@index([teamId])
@@ -76,39 +106,51 @@ model User {
 }
 
 model BusinessCard {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  photo       String?
-  fullName    String
-  jobTitle    String?
-  ministry    String?
-  direction   String?
-  service     String?
-  phoneMobile String?
-  phoneWork   String?
-  email       String?
-  whatsapp    String?
-  website     String?
-  linkedin    String?
-  facebook    String?
-  instagram   String?
-  tiktok      String?
-  address     String?
-  gpsLat      Float?
-  gpsLng      Float?
-  isActive    Boolean  @default(true)
-  isArchived  Boolean  @default(false)
-  qrCodeUrl   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  scans       Scan[]
+  id           String           @id @default(cuid())
+  slug         String           @unique
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId    String
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  photo        String?
+  fullName     String
+  jobTitle     String?
+  ministry     String?
+  direction    String?
+  service      String?
+  phoneMobile  String?
+  phoneWork    String?
+  email        String?
+  whatsapp     String?
+  website      String?
+  linkedin     String?
+  facebook     String?
+  instagram    String?
+  tiktok       String?
+  address      String?
+  gpsLat       Float?
+  gpsLng       Float?
+  isActive     Boolean          @default(true)
+  isArchived   Boolean          @default(false)
+  qrCodeUrl    String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  scans        Scan[]
+  // --- Carte professionnelle (module demandes) ---
+  agentId      String?
+  agent        User?            @relation("CardHolder", fields: [agentId], references: [id], onDelete: SetNull)
+  cardNumber   String?          @unique
+  status       CardStatus       @default(PENDING)
+  issuedAt     DateTime?
+  expiresAt    DateTime?
+  replacedById String?
+  credentials  CardCredential[]
+  events       CardEvent[]
+
   @@index([userId])
   @@index([companyId])
   @@index([slug])
+  @@index([agentId])
   @@map("business_cards")
 }
 
@@ -125,6 +167,7 @@ model Scan {
   browser   String?
   referrer  String?
   createdAt DateTime     @default(now())
+
   @@index([cardId])
   @@index([scannedAt])
   @@map("scans")
@@ -138,6 +181,183 @@ model Notification {
   message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
+
   @@index([userId])
   @@map("notifications")
+}
+
+// ======================= Module demandes administratives — phase 1 =======================
+
+model OrgUnit {
+  id        String         @id @default(cuid())
+  companyId String
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    OrgUnit?       @relation("OrgTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children  OrgUnit[]      @relation("OrgTree")
+  type      OrgUnitType
+  code      String
+  name      String
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  positions Position[]
+  agents    AgentProfile[]
+
+  @@unique([companyId, code])
+  @@index([parentId])
+  @@map("org_units")
+}
+
+model Position {
+  id          String           @id @default(cuid())
+  companyId   String
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  orgUnitId   String?
+  orgUnit     OrgUnit?         @relation(fields: [orgUnitId], references: [id], onDelete: SetNull)
+  code        String
+  label       String
+  civility    String?
+  level       Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  holders     PositionHolder[]
+  delegations Delegation[]
+
+  @@unique([companyId, code])
+  @@index([orgUnitId])
+  @@map("positions")
+}
+
+model PositionHolder {
+  id         String    @id @default(cuid())
+  positionId String
+  position   Position  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startsAt   DateTime  @default(now())
+  endsAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([positionId])
+  @@index([userId])
+  @@map("position_holders")
+}
+
+model Delegation {
+  id           String   @id @default(cuid())
+  positionId   String
+  position     Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  delegateId   String
+  delegate     User     @relation("Delegate", fields: [delegateId], references: [id], onDelete: Cascade)
+  startsAt     DateTime
+  endsAt       DateTime
+  requestTypes String[]
+  reason       String?
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  @@index([positionId])
+  @@index([delegateId])
+  @@map("delegations")
+}
+
+model AgentProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId         String
+  company           Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  matricule         String
+  civility          String?
+  grade             String?
+  corps             String?
+  hireDate          DateTime?
+  serviceStartDate  DateTime?
+  regime            String    @default("FONCTIONNAIRE")
+  orgUnitId         String?
+  orgUnit           OrgUnit?  @relation(fields: [orgUnitId], references: [id], onDelete: SetNull)
+  supervisorId      String?
+  supervisor        User?     @relation("Supervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
+  pinHash           String?
+  pinFailedAttempts Int       @default(0)
+  pinLockedUntil    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([companyId, matricule])
+  @@index([orgUnitId])
+  @@index([supervisorId])
+  @@map("agent_profiles")
+}
+
+model CardCredential {
+  id           String       @id @default(cuid())
+  cardId       String
+  card         BusinessCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  tokenHash    String       @unique
+  tokenEnc     String
+  tokenPrefix  String
+  createdAt    DateTime     @default(now())
+  revokedAt    DateTime?
+  revokeReason String?
+
+  @@index([cardId])
+  @@map("card_credentials")
+}
+
+model CardEvent {
+  id        String       @id @default(cuid())
+  cardId    String
+  card      BusinessCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  type      String
+  actorId   String?
+  reason    String?
+  metadata  Json?
+  createdAt DateTime     @default(now())
+
+  @@index([cardId])
+  @@map("card_events")
+}
+
+model RuleParameter {
+  id             String    @id @default(cuid())
+  companyId      String
+  company        Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  key            String
+  value          Json
+  validFrom      DateTime  @default(now())
+  validTo        DateTime?
+  legalReference String?
+  comment        String?
+  createdById    String?
+  createdAt      DateTime  @default(now())
+
+  @@index([companyId, key])
+  @@map("rule_parameters")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  seq        Int      @unique @default(autoincrement())
+  companyId  String?
+  actorId    String?
+  actorEmail String?
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  prevHash   String?
+  hash       String
+  createdAt  DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+  @@index([companyId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

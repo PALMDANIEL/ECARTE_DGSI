@@ -12,9 +12,12 @@ import { logout } from '../store/auth/auth.actions';
       <aside class="ec-sidebar">
         <div class="ec-sidebar-brand"><i class="pi pi-id-card"></i><span class="ec-display">ECARTE</span></div>
         <nav class="ec-nav">
-          <a *ngFor="let item of menuItems" [routerLink]="item.link" routerLinkActive="active" class="ec-nav-item">
-            <i [class]="item.icon"></i><span>{{ item.label }}</span>
-          </a>
+          <ng-container *ngFor="let item of menuItems">
+            <div class="ec-nav-group" *ngIf="item.group">{{ item.group }}</div>
+            <a [routerLink]="item.link" routerLinkActive="active" class="ec-nav-item">
+              <i [class]="item.icon"></i><span>{{ item.label }}</span>
+            </a>
+          </ng-container>
         </nav>
         <button class="ec-logout" (click)="logout()"><i class="pi pi-sign-out"></i><span>Déconnexion</span></button>
       </aside>
@@ -28,14 +31,15 @@ import { logout } from '../store/auth/auth.actions';
     .ec-sidebar { width: 240px; background: var(--ec-ink); color: #E8E6DE; display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; }
     .ec-sidebar-brand { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 600; padding: 0 8px 24px; color: white; }
     .ec-sidebar-brand i { color: var(--ec-brass); }
-    .ec-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .ec-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; min-height: 0; }
+    .ec-nav-group { font-family: var(--ec-font-mono); font-size: 0.65rem; letter-spacing: .08em; text-transform: uppercase; color: #7C8099; padding: 16px 12px 6px; }
     .ec-nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #B8B6AE; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
     .ec-nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
     .ec-nav-item.active { background: var(--ec-brass); color: var(--ec-ink); font-weight: 600; }
     .ec-logout { display: flex; align-items: center; gap: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #B8B6AE; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
     .ec-logout:hover { border-color: var(--ec-coral); color: var(--ec-coral); }
     .ec-main { flex: 1; background: var(--ec-paper); overflow-y: auto; }
-    @media (max-width: 768px) { .ec-shell { flex-direction: column; } .ec-sidebar { width: 100%; flex-direction: row; align-items: center; } .ec-nav { flex-direction: row; overflow-x: auto; } .ec-nav-item span, .ec-logout span { display: none; } }
+    @media (max-width: 768px) { .ec-shell { flex-direction: column; } .ec-sidebar { width: 100%; flex-direction: row; align-items: center; } .ec-nav { flex-direction: row; overflow-x: auto; } .ec-nav-item span, .ec-logout span, .ec-nav-group { display: none; } }
   `]
 })
 export class MainLayoutComponent {
@@ -46,9 +50,14 @@ export class MainLayoutComponent {
     { label: 'Utilisateurs', icon: 'pi pi-users', link: '/users', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Équipes', icon: 'pi pi-sitemap', link: '/teams', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Entreprises', icon: 'pi pi-building', link: '/companies', roles: ['SUPER_ADMIN'] },
+    { label: 'Agents', icon: 'pi pi-id-card', link: '/admin/agents', roles: ['SUPER_ADMIN', 'ADMIN'], group: 'Administration' },
+    { label: 'Organisation', icon: 'pi pi-sitemap', link: '/admin/organisation', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Postes', icon: 'pi pi-briefcase', link: '/admin/postes', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Journal d\'audit', icon: 'pi pi-shield', link: '/admin/audit', roles: ['SUPER_ADMIN', 'ADMIN'] },
+    { label: 'Règles', icon: 'pi pi-sliders-h', link: '/admin/parametres', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Mon compte', icon: 'pi pi-user', link: '/account' }
   ];
-  menuItems: { label: string; icon: string; link: string }[] = [];
+  menuItems: { label: string; icon: string; link: string; group?: string }[] = [];
   constructor(private store: Store<AppState>, private router: Router) {
     const role = this.roleFromToken();
     this.menuItems = this.allItems.filter(i => !('roles' in i) || (i as any).roles.includes(role));

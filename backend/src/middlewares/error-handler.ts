@@ -5,7 +5,7 @@ import { AppError } from '../shared/errors/app-error';
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   logger.error(err.stack);
-  if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message });
+  if (err instanceof AppError) return res.status(err.statusCode).json({ message: err.message, ...(err.code ? { code: err.code } : {}), ...(err.details || {}) });
   if (err instanceof multer.MulterError) {
     const message = err.code === 'LIMIT_FILE_SIZE' ? 'Fichier trop volumineux (5 Mo max)' : 'Envoi du fichier invalide (champ attendu : "file")';
     return res.status(400).json({ message });

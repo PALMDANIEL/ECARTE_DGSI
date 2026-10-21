@@ -37,8 +37,8 @@ export class CardPdfService {
 
   // publicUrl retiré : le QR encode désormais directement les coordonnées
   // du contact (vCard), pas une URL vers le serveur. Fonctionne hors ligne.
-  async generatePdf(card: BusinessCard): Promise<Buffer> {
-    const qrDataUrl = await generateQrDataUrl(card);
+  async generatePdf(card: BusinessCard, accessUrl?: string): Promise<Buffer> {
+    const qrDataUrl = await generateQrDataUrl(card, accessUrl);
 
     const branding: CardBranding = { logoDataUrl: this.getLogoDataUrl() };
     const html = generateCardHtml(card, qrDataUrl, branding);

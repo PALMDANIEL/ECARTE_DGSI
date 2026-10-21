@@ -3,8 +3,10 @@ import { BusinessCardService } from '../services/card.service';
 import { CreateCardDto, UpdateCardDto } from '../dto';
 import { validate } from 'class-validator';
 import { plainToClass } from 'class-transformer';
+import { AppError } from '../../../shared/errors/app-error';
 import { cardPdfService } from '../services/card-pdf.service';
 import { generateQrPngBuffer } from '../services/card-qr.util';
+import { cardLifecycleService } from '../../card-lifecycle/card-lifecycle.service';
 import { ScanService } from '../../scans/services/scan.service';
 import { ScanRepository } from '../../scans/repositories/scan.repository';
 import { BusinessCardRepository } from '../repositories/card.repository';
@@ -22,11 +24,10 @@ export class BusinessCardController {
       const dto = plainToClass(CreateCardDto, emptyToNull(req.body));
       const errors = await validate(dto);
       if (errors.length > 0) return res.status(400).json({ errors });
-      const result = await this.service.create(req.user.id, req.user.companyId, dto);
+      const result = await this.service.create(req.user.id, req.user.companyId, dto, req.user.role);
       return res.status(201).json(result);
     } catch (error: any) {
-      console.error('Erreur creation carte:', error);
-      return res.status(400).json({ message: error.message || 'Erreur de creation' });
+      return res.status(error instanceof AppError ? error.statusCode : 400).json({ message: error.message || 'Erreur de creation' });
     }
   }
 
@@ -48,15 +49,15 @@ export class BusinessCardController {
     }
   }
 
-  async update(req: Request, res: Response) {
+  async update(req: Request & { user?: any }, res: Response) {
     try {
       const dto = plainToClass(UpdateCardDto, emptyToNull(req.body));
       const errors = await validate(dto);
       if (errors.length > 0) return res.status(400).json({ errors });
-      const result = await this.service.update(req.params.id, dto);
+      const result = await this.service.update(req.params.id, dto, req.user);
       return res.json(result);
     } catch (error: any) {
-      return res.status(400).json({ message: error.message });
+      return res.status(error instanceof AppError ? error.statusCode : 400).json({ message: error.message });
     }
   }
 
@@ -81,12 +82,15 @@ export class BusinessCardController {
     }
   }
 
-  async exportPDF(req: Request, res: Response) {
+  async exportPDF(req: Request & { user?: any }, res: Response) {
     try {
       const card = await this.service.findById(req.params.id);
       if (!card) return res.status(404).json({ message: 'Card not found' });
 
-      const pdfBuffer = await cardPdfService.generatePdf(card);
+      // Le QR du PDF imprimé est le lien d'accès sécurisé, réservé aux gestionnaires et au titulaire
+      const mayPrintAccessQr = ['ADMIN', 'SUPER_ADMIN'].includes(req.user.role) || card.agentId === req.user.id;
+      const accessUrl = mayPrintAccessQr ? await cardLifecycleService.accessUrl(req.user.companyId, card.id) : null;
+      const pdfBuffer = await cardPdfService.generatePdf(card, accessUrl ?? undefined);
 
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="carte-${card.slug}.pdf"`);

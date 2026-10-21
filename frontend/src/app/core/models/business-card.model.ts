@@ -24,6 +24,10 @@ export interface BusinessCard {
   isActive: boolean;
   isArchived: boolean;
   qrCodeUrl?: string;
+  agentId?: string | null;
+  cardNumber?: string | null;
+  status?: 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'REVOKED' | 'EXPIRED' | 'REPLACED';
+  expiresAt?: string | null;
   createdAt: Date;
   updatedAt: Date;
   company?: { name: string };

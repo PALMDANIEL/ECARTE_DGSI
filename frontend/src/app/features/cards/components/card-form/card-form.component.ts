@@ -5,6 +5,8 @@ import { CardService } from '../../services/card.service';
 import { MessageService } from 'primeng/api';
 import { Location } from '@angular/common';
 import { BusinessCard } from '../../../../core/models/business-card.model';
+import { currentRole } from '../../../../core/auth/role';
+import { AdminApiService, Agent } from '../../../admin/services/admin-api.service';
 
 @Component({
   selector: 'app-card-form',
@@ -35,6 +37,14 @@ import { BusinessCard } from '../../../../core/models/business-card.model';
         </div>
 
         <div class="ec-form-grid">
+          <div class="p-field" *ngIf="canChooseAgent" style="grid-column: 1 / -1">
+            <label>Agent titulaire de la carte</label>
+            <select class="ec-select-agent" formControlName="agentId">
+              <option value="">— Aucun (carte de visite simple) —</option>
+              <option *ngFor="let a of agents" [value]="a.id">{{ a.lastName | uppercase }} {{ a.firstName }} — {{ a.profile.matricule }}</option>
+            </select>
+            <small style="color: var(--ec-ink-soft)">Nécessaire pour émettre la carte professionnelle avec QR d'accès. Non modifiable une fois la carte émise.</small>
+          </div>
           <div class="p-field"><label>Nom complet *</label><input pInputText
             formControlName="fullName" placeholder="Jean Dupont"/></div>
           <div class="p-field"><label>Fonction</label><input pInputText
@@ -83,6 +93,7 @@ import { BusinessCard } from '../../../../core/models/business-card.model';
     .ec-form-grid {display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;
       background:var(--ec-paper-raised);padding:24px;border-radius:14px;border:1px solid var(--ec-line);margin:20px 0;}
     .p-field {display:flex;flex-direction:column;gap:4px;}
+    .ec-select-agent { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--ec-line); font-family: var(--ec-font-body); background: #fff; }
     .p-field label {font-weight:600;font-size:0.85rem;color:var(--ec-ink-soft);}
     .ec-form-actions {display:flex;gap:12px;justify-content:flex-end;}
     .ec-error-box {margin-top:16px;padding:10px 12px;background:#FBEAEA;
@@ -123,6 +134,8 @@ export class CardFormComponent implements OnInit {
   uploadingPhoto = false;
   errorMsg = '';
   photoPreview: string | null = null;
+  agents: Agent[] = [];
+  canChooseAgent = ['ADMIN', 'SUPER_ADMIN', 'MANAGER'].includes(currentRole() || '');
 
   constructor(
     private fb: FormBuilder,
@@ -130,7 +143,8 @@ export class CardFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private messageService: MessageService,
-    private location: Location
+    private location: Location,
+    private adminApi: AdminApiService
   ) {
     this.cardForm = this.fb.group({
       fullName: ['', Validators.required],
@@ -150,8 +164,12 @@ export class CardFormComponent implements OnInit {
       tiktok: [''],
       gpsLat: [null],
       gpsLng: [null],
-      photo: ['']
+      photo: [''],
+      agentId: ['']
     });
+    if (this.canChooseAgent) {
+      this.adminApi.agents({ limit: 200 }).subscribe(r => (this.agents = r.items.filter(a => a.isActive)));
+    }
   }
 
   ngOnInit(): void {
@@ -161,7 +179,7 @@ export class CardFormComponent implements OnInit {
       this.cardId = id;
       this.cardService.getCard(id).subscribe({
         next: (card: BusinessCard) => {
-          this.cardForm.patchValue(card);
+          this.cardForm.patchValue({ ...card, agentId: card.agentId || '' });
           this.photoPreview = card.photo || null;
         },
         error: () => this.messageService.add({severity: 'error', summary: 'Erreur', detail: 'Carte introuvable'})
@@ -215,7 +233,9 @@ export class CardFormComponent implements OnInit {
     this.submitting = true;
     this.errorMsg = '';
 
-    const data = this.cardForm.value;
+    const data = { ...this.cardForm.value };
+    // Seuls les gestionnaires peuvent désigner le titulaire ; pour les autres le champ n'est pas envoyé
+    if (!this.canChooseAgent) delete data.agentId;
 
     const request$ = this.isEdit && this.cardId
       ? this.cardService.updateCard(this.cardId, data)

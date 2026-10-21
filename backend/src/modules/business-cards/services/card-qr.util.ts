@@ -31,8 +31,8 @@ export function buildVCard(card: BusinessCard, companyName?: string): string {
 }
 
 // Pour l'intégration dans le PDF (fond transparent, s'harmonise avec le design de la carte)
-export async function generateQrDataUrl(card: BusinessCard): Promise<string> {
-  const vcard = buildVCard(card);
+export async function generateQrDataUrl(card: BusinessCard, accessUrl?: string): Promise<string> {
+  const vcard = accessUrl ?? buildVCard(card);
   return QRCode.toDataURL(vcard, {
     margin: 0,
     color: { dark: '#29345B', light: '#00000000' },
@@ -48,4 +48,9 @@ export async function generateQrPngBuffer(card: BusinessCard): Promise<Buffer> {
     color: { dark: '#29345B', light: '#FFFFFF' },
     width: 300,
   });
+}
+
+/** QR du lien d'accès sécurisé (jeton opaque) : aucune donnée personnelle n'est encodée. */
+export async function generateAccessQrPng(url: string): Promise<Buffer> {
+  return QRCode.toBuffer(url, { margin: 1, errorCorrectionLevel: 'M', color: { dark: '#29345B', light: '#FFFFFF' }, width: 400 });
 }

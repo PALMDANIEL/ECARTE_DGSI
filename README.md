@@ -20,3 +20,8 @@ npm run seed                # société ECARTE + compte SUPER_ADMIN (admin@ecart
 ```
 
 Le mot de passe du seed se change avec `SEED_ADMIN_PASSWORD` (et l'email avec `SEED_ADMIN_EMAIL`).
+
+## Module « Demandes administratives » (en cours)
+
+Gestion des cartes professionnelles à QR code, des agents et de l'organisation, puis des demandes de congé, décisions, jouissances et autorisations d'absence.
+Conception : [docs/module-demandes/CONCEPTION.md](docs/module-demandes/CONCEPTION.md) — Phase 1 (livrée) : [docs/module-demandes/PHASE-1.md](docs/module-demandes/PHASE-1.md).

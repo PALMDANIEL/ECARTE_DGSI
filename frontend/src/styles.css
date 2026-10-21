@@ -37,3 +37,35 @@ h1, h2, .ec-display { font-family: var(--ec-font-display); }
 .ec-page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
 .ec-page-header h1 { font-size: 2rem; margin: 0; color: var(--ec-ink); }
 .ec-page-header p { font-size: 0.7rem; color: var(--ec-teal); margin: 4px 0 0; }
+
+/* ---------- Écrans d'administration (module demandes) ---------- */
+.ec-panel { background: var(--ec-paper-raised); border: 1px solid var(--ec-line); border-radius: 14px; padding: 8px; overflow-x: auto; margin-bottom: 20px; }
+.ec-panel-pad { padding: 20px; }
+.ec-table { width: 100%; border-collapse: collapse; }
+.ec-table th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ec-ink-soft); padding: 12px 16px; border-bottom: 1px solid var(--ec-line); white-space: nowrap; }
+.ec-table td { padding: 11px 16px; border-bottom: 1px solid var(--ec-line); font-size: 0.88rem; color: var(--ec-ink); vertical-align: middle; }
+.ec-table tr:last-child td { border-bottom: none; }
+.ec-empty { text-align: center; color: var(--ec-ink-soft); padding: 32px !important; }
+.ec-cell-actions { display: flex; gap: 4px; justify-content: flex-end; }
+.ec-icon-btn { width: 30px; height: 30px; border-radius: 6px; border: none; background: transparent; color: var(--ec-ink-soft); cursor: pointer; }
+.ec-icon-btn:hover { background: var(--ec-paper); color: var(--ec-ink); }
+.ec-icon-btn.danger:hover { background: #FBEAEA; color: var(--ec-coral); }
+.ec-badge { display: inline-block; font-family: var(--ec-font-mono); font-size: 0.68rem; padding: 3px 9px; border-radius: 999px; background: #EEF0F8; color: var(--ec-ink-soft); white-space: nowrap; }
+.ec-badge.ok { background: #EAF6F6; color: var(--ec-teal); }
+.ec-badge.warn { background: #FBF3E3; color: #9A7421; }
+.ec-badge.bad { background: #FBEAEA; color: var(--ec-coral); }
+.ec-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.ec-form-grid .full { grid-column: 1 / -1; }
+.p-field { display: flex; flex-direction: column; gap: 4px; }
+.p-field label { font-weight: 600; font-size: 0.8rem; color: var(--ec-ink-soft); }
+.ec-select, .ec-textarea { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--ec-line); font-family: var(--ec-font-body); font-size: 0.9rem; background: #fff; color: var(--ec-ink); width: 100%; }
+.ec-textarea { min-height: 120px; font-family: var(--ec-font-mono); font-size: 0.78rem; }
+.ec-form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+.ec-error-box { margin-bottom: 12px; padding: 10px 12px; background: #FBEAEA; color: var(--ec-coral); border-radius: 8px; font-size: 0.85rem; }
+.ec-info-box { margin-bottom: 12px; padding: 10px 12px; background: #EAF6F6; color: #0B6B6D; border-radius: 8px; font-size: 0.85rem; }
+.ec-toolbar-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.ec-toolbar-row input, .ec-toolbar-row select { min-width: 200px; }
+.ec-hint { font-size: 0.78rem; color: var(--ec-ink-soft); margin: 4px 0 0; }
+.ec-section-title { font-family: var(--ec-font-display); font-size: 1.1rem; margin: 24px 0 12px; color: var(--ec-ink); }
+.ec-mono-text { font-family: var(--ec-font-mono); font-size: 0.8rem; }
+@media (max-width: 700px) { .ec-form-grid { grid-template-columns: 1fr; } }

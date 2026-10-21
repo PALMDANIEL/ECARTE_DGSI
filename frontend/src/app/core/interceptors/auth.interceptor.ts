@@ -17,6 +17,10 @@ export class AuthInterceptor implements HttpInterceptor {
   }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    // Le portail agent (scan du QR + PIN) a sa propre session : jamais de jeton d'administration envoyé,
+    // et un 401 (PIN erroné, session agent expirée) ne doit pas déconnecter l'interface d'administration.
+    if (req.url.includes('/access/')) return next.handle(req);
+
     return next.handle(this.withToken(req)).pipe(
       catchError((error: HttpErrorResponse) => {
         const isAuthCall = req.url.includes('/auth/login') || req.url.includes('/auth/refresh');
