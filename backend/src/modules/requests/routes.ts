@@ -15,6 +15,7 @@ import { ensureDefaults } from './request-defaults';
 import { documentService, sampleContext } from './document.service';
 import { requestService, ActAction } from './request.service';
 import { workflowService } from './workflow.service';
+import { escalationService } from './escalation.service';
 
 const admin = authorize('ADMIN', 'SUPER_ADMIN');
 const actorOf = (req: any) => ({ id: req.user.id, email: req.user.email });
@@ -162,5 +163,10 @@ export function sniffMime(buf: Buffer): string | null {
   return null;
 }
 export const attachmentUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024, files: 1 } }).single('file');
+
+export const escalationRouter = Router();
+escalationRouter.use(authenticate, admin);
+escalationRouter.get('/overdue', asyncHandler(async (req: any, res) => res.json(await escalationService.list(req.user.companyId))));
+escalationRouter.post('/run', asyncHandler(async (req: any, res) => res.json(await escalationService.run(req.user.companyId))));
 
 export { types as requestTypeRouter, absence as absenceTypeRouter, workflows as workflowRouter, templates as formTemplateRouter, requests as requestRouter, documentService };

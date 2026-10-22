@@ -52,7 +52,7 @@ export type StepResolution = 'POSITION' | 'SUPERVISOR_LEVEL' | 'UNIT_TYPE_HEAD';
 export interface WorkflowStep {
   id?: string; order?: number; kind: StepKind; label?: string | null; resolution: StepResolution;
   positionId?: string | null; level?: number | null; unitType?: OrgUnitType | null; isMandatory: boolean;
-  conditionJson?: { field: string; op: string; value: unknown } | null; deadlineDays?: number | null; allowReturn: boolean; rejectOnUnfavorable: boolean;
+  conditionJson?: { field: string; op: string; value: unknown } | null; deadlineDays?: number | null; escalatePositionId?: string | null; allowReturn: boolean; rejectOnUnfavorable: boolean;
 }
 export interface WorkflowDefinition { id: string; version: number; name?: string | null; isActive: boolean; validFrom: string; validTo: string | null; steps: WorkflowStep[]; }
 export interface RequestTypeDef { id: string; code: string; name: string; prefix: string; isActive: boolean; requiresPriorDecision: boolean; attachmentRules: { code: string; label: string; required: boolean }[]; }

@@ -2,8 +2,17 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import request from 'supertest';
 import { prisma } from '../src/database/client';
-import { app } from '../src/app';
+import http from 'http';
+import { app as expressApp } from '../src/app';
 import { config } from '../src/infrastructure/config';
+
+/**
+ * Un seul serveur HTTP par fichier de test, sur 127.0.0.1 : `request(app)` avec l'application Express
+ * ouvrirait et fermerait un serveur éphémère à chaque requête (centaines de ports), source d'erreurs
+ * réseau aléatoires (« socket hang up », réponses vides) sur une machine chargée.
+ */
+const app = http.createServer(expressApp).listen(0, '127.0.0.1');
+afterAll(() => new Promise<void>(resolve => app.close(() => resolve())));
 
 export { app, prisma, request };
 

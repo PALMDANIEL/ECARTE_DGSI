@@ -52,6 +52,12 @@ export const RULE_DEFAULTS: Record<string, RuleDef> = {
   'absence.hours_per_day': { group: 'Autorisations d\'absence', type: 'number', min: 1, value: 24, description: 'Heures équivalant à un jour (le formulaire officiel emploie « 24 heures » pour une journée ; mettre 8 pour une journée de travail)' },
   'absence.enforce_cap': { group: 'Autorisations d\'absence', type: 'boolean', value: true, description: 'Refuser les demandes qui dépassent le plafond annuel du type d\'absence' },
 
+  // --- Notifications et délais ---
+  'notify.email_enabled': { group: 'Notifications et délais', type: 'boolean', value: false, description: 'Envoyer aussi les notifications par email (aux agents ayant un email réel ; nécessite la configuration SMTP du serveur)' },
+  'escalation.reminder_enabled': { group: 'Notifications et délais', type: 'boolean', value: true, description: 'Envoyer un rappel au responsable quand l\'échéance d\'une étape est dépassée' },
+  'escalation.escalate_after_days': { group: 'Notifications et délais', type: 'number', min: 0, value: 1, description: 'Jours de retard avant l\'escalade vers le poste d\'escalade de l\'étape' },
+  'escalation.substitute_can_act': { group: 'Notifications et délais', type: 'boolean', value: true, description: 'Le poste d\'escalade peut traiter l\'étape en retard à la place du responsable' },
+
   // --- Calendrier ---
   'calendar.weekend_days': { group: 'Calendrier', type: 'string', pattern: /^[0-6](,[0-6])*$/, value: '0,6', description: 'Jours de week-end (0 = dimanche … 6 = samedi), séparés par des virgules' }
 };

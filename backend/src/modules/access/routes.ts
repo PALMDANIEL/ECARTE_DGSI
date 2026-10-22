@@ -6,6 +6,7 @@ import { AppError } from '../../shared/errors/app-error';
 import { asyncHandler, parseDto } from '../../shared/validation';
 import { agentJwtSecret } from '../../shared/utils/crypto';
 import { accessService, AgentSession } from './access.service';
+import { notifyService } from '../notifications/notify.service';
 import { prisma } from '../../database/client';
 import { requestService } from '../requests/request.service';
 import { leaveService } from '../leave/leave.service';
@@ -102,6 +103,9 @@ router.get('/requests/:id/attachments/:attachmentId', authenticateAgent, agentCo
 }));
 
 // /me est déclaré avant /:token pour ne pas être pris pour un jeton
+router.get('/notifications', authenticateAgent, agentContext, asyncHandler(async (req: any, res) => res.json(await notifyService.list(req.agentCtx.agentId, { unreadOnly: req.query.unread === 'true', page: parseInt(String(req.query.page), 10) || 1, limit: parseInt(String(req.query.limit), 10) || 20 }))));
+router.post('/notifications/read-all', authenticateAgent, agentContext, asyncHandler(async (req: any, res) => res.json({ updated: await notifyService.markAllRead(req.agentCtx.agentId) })));
+router.post('/notifications/:id/read', authenticateAgent, agentContext, asyncHandler(async (req: any, res) => { await notifyService.markRead(req.agentCtx.agentId, req.params.id); res.status(204).send(); }));
 router.get('/me', authenticateAgent, asyncHandler(async (req, res) => res.json(await accessService.me(req.agent.sub, req.agent.cardId))));
 router.get('/:token', scanLimiter, asyncHandler(async (req, res) => res.json(await accessService.scan(req.params.token, ctxOf(req)))));
 router.post('/:token/pin', pinLimiter, asyncHandler(async (req, res) => {

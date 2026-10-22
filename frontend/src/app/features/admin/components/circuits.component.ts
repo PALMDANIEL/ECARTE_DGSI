@@ -72,6 +72,8 @@ interface EditStep extends WorkflowStep { hasCondition: boolean; condField: stri
               <div class="p-field" *ngIf="s.resolution === 'SUPERVISOR_LEVEL'"><label>Niveau (1 = supérieur direct)</label><input pInputText type="number" min="1" max="10" [(ngModel)]="s.level" /></div>
               <div class="p-field"><label>Intitulé du cadre (facultatif)</label><input pInputText [(ngModel)]="s.label" placeholder="Auto : « Avis de Monsieur le … »" /></div>
               <div class="p-field"><label>Délai de traitement (jours)</label><input pInputText type="number" min="1" [(ngModel)]="s.deadlineDays" /></div>
+              <div class="p-field" *ngIf="s.deadlineDays"><label>Poste d'escalade en cas de retard</label>
+                <select class="ec-select" [(ngModel)]="s.escalatePositionId"><option [ngValue]="null">Aucune escalade</option><option *ngFor="let p of positions" [value]="p.id">{{ p.label }}{{ p.holder ? '' : ' (vacant)' }}</option></select></div>
               <div class="p-field"><label><input type="checkbox" [(ngModel)]="s.isMandatory" /> Étape obligatoire</label></div>
               <div class="p-field"><label><input type="checkbox" [(ngModel)]="s.allowReturn" /> Retour pour correction autorisé</label></div>
               <div class="p-field" *ngIf="s.kind !== 'DECISION'"><label><input type="checkbox" [(ngModel)]="s.rejectOnUnfavorable" /> Un avis défavorable met fin à la demande</label></div>
@@ -188,7 +190,7 @@ export class CircuitsComponent implements OnInit {
 
   addStep(kind: any = 'AVIS') {
     const decisionIdx = this.draft.findIndex(s => s.kind === 'DECISION');
-    const step = this.toEdit({ kind, resolution: 'POSITION', positionId: null, isMandatory: true, allowReturn: true, rejectOnUnfavorable: kind === 'DECISION', deadlineDays: null });
+    const step = this.toEdit({ kind, resolution: 'POSITION', positionId: null, isMandatory: true, allowReturn: true, rejectOnUnfavorable: kind === 'DECISION', deadlineDays: null, escalatePositionId: null });
     // Une nouvelle étape d'avis s'insère avant la décision finale
     if (kind !== 'DECISION' && decisionIdx >= 0) this.draft.splice(decisionIdx, 0, step); else this.draft.push(step);
   }
@@ -199,7 +201,7 @@ export class CircuitsComponent implements OnInit {
     const steps = this.draft.map(s => ({
       kind: s.kind, label: s.label || null, resolution: s.resolution,
       positionId: s.resolution === 'POSITION' ? s.positionId : null, level: s.resolution === 'SUPERVISOR_LEVEL' ? Number(s.level) || 1 : null, unitType: s.resolution === 'UNIT_TYPE_HEAD' ? s.unitType : null,
-      isMandatory: s.isMandatory, deadlineDays: s.deadlineDays ? Number(s.deadlineDays) : null, allowReturn: s.allowReturn, rejectOnUnfavorable: s.kind === 'DECISION' ? true : s.rejectOnUnfavorable,
+      isMandatory: s.isMandatory, deadlineDays: s.deadlineDays ? Number(s.deadlineDays) : null, escalatePositionId: s.deadlineDays ? s.escalatePositionId || null : null, allowReturn: s.allowReturn, rejectOnUnfavorable: s.kind === 'DECISION' ? true : s.rejectOnUnfavorable,
       condition: s.hasCondition && s.kind !== 'DECISION' ? { field: s.condField, op: s.condOp, value: Number.isNaN(Number(s.condValue)) ? s.condValue : Number(s.condValue) } : null
     }));
     this.api.publishWorkflow(this.typeCode, steps).subscribe({

@@ -66,3 +66,13 @@ export function parseDate(value: string): Date | null {
   if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) throw new Error(`date inexistante « ${v} »`);
   return date;
 }
+
+/** Écriture CSV (séparateur « ; » pour Excel français, BOM UTF-8). Neutralise l'injection de formule (=, +, -, @). */
+export function toCsv(headers: string[], rows: (string | number | null | undefined | Date)[][]): string {
+  const cell = (v: string | number | null | undefined | Date) => {
+    let t = v === null || v === undefined ? '' : v instanceof Date ? v.toISOString().slice(0, 10) : String(v);
+    if (/^[=+\-@\t\r]/.test(t) && typeof v !== 'number') t = "'" + t;
+    return /[";\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  return '﻿' + [headers, ...rows].map(r => r.map(cell).join(';')).join('\r\n') + '\r\n';
+}

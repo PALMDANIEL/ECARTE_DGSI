@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
 import { AppState } from '../store';
+import { NotificationsService } from '../../features/notifications/notifications.service';
 import { logout } from '../store/auth/auth.actions';
 
 @Component({
@@ -16,6 +17,7 @@ import { logout } from '../store/auth/auth.actions';
             <div class="ec-nav-group" *ngIf="item.group">{{ item.group }}</div>
             <a [routerLink]="item.link" routerLinkActive="active" class="ec-nav-item">
               <i [class]="item.icon"></i><span>{{ item.label }}</span>
+              <span class="ec-nav-badge" *ngIf="item.link === '/notifications' && (unread$ | async) as n">{{ n > 99 ? '99+' : n }}</span>
             </a>
           </ng-container>
         </nav>
@@ -34,6 +36,7 @@ import { logout } from '../store/auth/auth.actions';
     .ec-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; min-height: 0; }
     .ec-nav-group { font-family: var(--ec-font-mono); font-size: 0.65rem; letter-spacing: .08em; text-transform: uppercase; color: #7C8099; padding: 16px 12px 6px; }
     .ec-nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; color: #B8B6AE; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+    .ec-nav-badge { margin-left: auto; background: var(--ec-coral); color: white; border-radius: 999px; font-size: .7rem; font-weight: 700; padding: 1px 7px; }
     .ec-nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
     .ec-nav-item.active { background: var(--ec-brass); color: var(--ec-ink); font-weight: 600; }
     .ec-logout { display: flex; align-items: center; gap: 10px; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #B8B6AE; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
@@ -47,6 +50,8 @@ export class MainLayoutComponent {
     { label: 'Tableau de bord', icon: 'pi pi-home', link: '/dashboard' },
     { label: 'Mes cartes', icon: 'pi pi-id-card', link: '/cards' },
     { label: 'Demandes', icon: 'pi pi-inbox', link: '/requests' },
+    { label: 'Notifications', icon: 'pi pi-bell', link: '/notifications' },
+    { label: 'Pilotage', icon: 'pi pi-chart-bar', link: '/pilotage' },
     { label: 'Statistiques', icon: 'pi pi-chart-line', link: '/statistics' },
     { label: 'Utilisateurs', icon: 'pi pi-users', link: '/users', roles: ['SUPER_ADMIN', 'ADMIN'] },
     { label: 'Équipes', icon: 'pi pi-sitemap', link: '/teams', roles: ['SUPER_ADMIN', 'ADMIN'] },
@@ -64,12 +69,15 @@ export class MainLayoutComponent {
     { label: 'Mon compte', icon: 'pi pi-user', link: '/account' }
   ];
   menuItems: { label: string; icon: string; link: string; group?: string }[] = [];
-  constructor(private store: Store<AppState>, private router: Router) {
+  unread$;
+  constructor(private store: Store<AppState>, private router: Router, private notifications: NotificationsService) {
+    this.unread$ = this.notifications.unread;
+    this.notifications.startPolling();
     const role = this.roleFromToken();
     this.menuItems = this.allItems.filter(i => !('roles' in i) || (i as any).roles.includes(role));
   }
   private roleFromToken(): string | null {
     try { return JSON.parse(atob((localStorage.getItem('accessToken') || '').split('.')[1])).role || null; } catch { return null; }
   }
-  logout() { this.store.dispatch(logout()); this.router.navigate(['/auth/login']); }
+  logout() { this.notifications.stopPolling(); this.store.dispatch(logout()); this.router.navigate(['/auth/login']); }
 }

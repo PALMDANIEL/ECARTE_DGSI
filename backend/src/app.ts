@@ -19,11 +19,13 @@ import { filesRouter } from './modules/files/routes';
 import { analyticsRouter } from './modules/analytics/routes';
 import { orgUnitRouter, positionRouter, delegationRouter } from './modules/org/routes';
 import { agentRouter } from './modules/agents/routes';
+import { statsRouter } from './modules/stats/routes';
+import { notificationRouter } from './modules/notifications/routes';
 import { auditRouter } from './modules/audit/routes';
 import { settingsRouter } from './modules/settings/routes';
 import { accessRouter } from './modules/access/routes';
 import { leaveRouter, holidayRouter } from './modules/leave/routes';
-import { requestTypeRouter, absenceTypeRouter, workflowRouter, formTemplateRouter, requestRouter } from './modules/requests/routes';
+import { requestTypeRouter, absenceTypeRouter, workflowRouter, formTemplateRouter, requestRouter, escalationRouter } from './modules/requests/routes';
 import swaggerSpec from './infrastructure/swagger';
 import { cardPdfService } from './modules/business-cards/services/card-pdf.service';
 
@@ -82,6 +84,9 @@ app.use('/api/absence-types', absenceTypeRouter);
 app.use('/api/workflows', workflowRouter);
 app.use('/api/form-templates', formTemplateRouter);
 app.use('/api/requests', requestRouter);
+app.use('/api/escalations', escalationRouter);
+app.use('/api/stats', statsRouter);
+app.use('/api/notifications', notificationRouter);
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

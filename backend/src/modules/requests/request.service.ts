@@ -1,3 +1,4 @@
+import { notifyService } from '../notifications/notify.service';
 import crypto from 'crypto';
 import path from 'path';
 import { Prisma } from '@prisma/client';
@@ -36,10 +37,8 @@ export class RequestService {
     return `${prefix}-${year}-${String(rows[0].last).padStart(6, '0')}`;
   }
 
-  private async notify(userIds: string[], message: string, requestId: string) {
-    const unique = [...new Set(userIds)];
-    if (!unique.length) return;
-    await prisma.notification.createMany({ data: unique.map(userId => ({ userId, type: 'REQUEST', message, requestId })) });
+  private notify(companyId: string, userIds: string[], message: string, requestId: string, type: string, link?: string) {
+    return notifyService.notify({ companyId, userIds, message, requestId, type, link });
   }
 
   /** Utilisateurs pouvant agir sur une étape (titulaires + délégataires du poste, ou assigné direct). */
@@ -166,7 +165,7 @@ export class RequestService {
         await tx.requestStep.create({
           data: {
             requestId, round, order: s.order, kind: s.kind, label: s.heading, positionId: s.positionId, assigneeId: s.assigneeId, titleSnapshot: s.titleSnapshot,
-            allowReturn: s.allowReturn, rejectOnUnfavorable: s.rejectOnUnfavorable, deadlineDays: s.deadlineDays,
+            allowReturn: s.allowReturn, rejectOnUnfavorable: s.rejectOnUnfavorable, deadlineDays: s.deadlineDays, escalatePositionId: s.escalatePositionId,
             ...(i === 0 ? { activatedAt: now, dueAt: s.deadlineDays ? addDays(now, s.deadlineDays) : null } : {})
           }
         });
@@ -175,7 +174,7 @@ export class RequestService {
     await auditService.log({ companyId, actor: { id: agentId, email: agent.email }, action: resubmission ? 'REQUEST_RESUBMITTED' : 'REQUEST_SUBMITTED', entity: 'Request', entityId: requestId, after: { reference: r.reference, round, workflowVersion: wf.version } });
     await this.generatePdfSafely(requestId, resubmission ? 'RESUBMITTED' : 'SUBMITTED', agentId);
     const first = await prisma.requestStep.findFirst({ where: { requestId, round }, orderBy: { order: 'asc' } });
-    if (first) await this.notify(await this.approversOf(first, r.type.code), `Nouvelle demande à traiter : ${r.reference}`, requestId);
+    if (first) await this.notify(companyId, await this.approversOf(first, r.type.code), `Nouvelle demande à traiter : ${r.reference}`, requestId, 'REQUEST_ASSIGNED', `/requests?open=${requestId}`);
     return this.agentView(requestId, agentId);
   }
 
@@ -201,7 +200,11 @@ export class RequestService {
       if (active.id !== stepId) throw new AppError('Cette étape n\'est pas (ou n\'est plus) l\'étape active de la demande', 409, 'NOT_ACTIVE_STEP');
       if (request.agentId === user.id) throw new AppError('Vous ne pouvez pas traiter votre propre demande', 403);
 
-      const allowed = active.assigneeId ? active.assigneeId === user.id : active.positionId ? await workflowService.canActOnPosition(user.id, active.positionId, request.type.code) : false;
+      let allowed = active.assigneeId ? active.assigneeId === user.id : active.positionId ? await workflowService.canActOnPosition(user.id, active.positionId, request.type.code) : false;
+      // Étape escaladée : le poste d'escalade peut traiter à la place du responsable en retard (si le paramètre l'autorise)
+      if (!allowed && active.escalatedAt && active.escalatePositionId && await rulesService.get<boolean>(request.companyId, 'escalation.substitute_can_act')) {
+        allowed = await workflowService.canActOnPosition(user.id, active.escalatePositionId, request.type.code);
+      }
       if (!allowed) throw new AppError('Vous n\'êtes pas habilité à traiter cette étape', 403);
 
       const isDecision = active.kind === 'DECISION';
@@ -272,11 +275,11 @@ export class RequestService {
     // Notifications : agent informé à chaque étape décisive, prochain approbateur prévenu
     if (status === 'IN_PROGRESS' && nextStepId) {
       const next = await prisma.requestStep.findUniqueOrThrow({ where: { id: nextStepId } });
-      await this.notify(await this.approversOf(next, request.type.code), `Demande à traiter : ${request.reference}`, requestId);
-      await this.notify([request.agentId], `Votre demande ${request.reference} a franchi une étape (${result === 'UNFAVORABLE' ? 'avis défavorable' : 'avis favorable'}).`, requestId);
+      await this.notify(user.companyId, await this.approversOf(next, request.type.code), `Demande à traiter : ${request.reference}`, requestId, 'REQUEST_ASSIGNED', `/requests?open=${requestId}`);
+      await this.notify(user.companyId, [request.agentId], `Votre demande ${request.reference} a franchi une étape (${result === 'UNFAVORABLE' ? 'avis défavorable' : 'avis favorable'}).`, requestId, 'REQUEST_UPDATE');
     } else {
       const text = { APPROVED: 'approuvée', REJECTED: 'rejetée', RETURNED: 'retournée pour correction' }[status as 'APPROVED' | 'REJECTED' | 'RETURNED'];
-      await this.notify([request.agentId], `Votre demande ${request.reference} a été ${text}.`, requestId);
+      await this.notify(user.companyId, [request.agentId], `Votre demande ${request.reference} a été ${text}.`, requestId, 'REQUEST_UPDATE');
     }
     return this.detail(requestId, { id: user.id, companyId: user.companyId, role: 'ADMIN' }, true);
   }
@@ -349,7 +352,7 @@ export class RequestService {
   }
 
   // ---------------------------------------------------- responsables et admin
-  private async actablePositionIds(userId: string, at = new Date()): Promise<string[]> {
+  async actablePositionIds(userId: string, at = new Date()): Promise<string[]> {
     const [held, delegated] = await Promise.all([
       prisma.positionHolder.findMany({ where: { userId, startsAt: { lte: at }, OR: [{ endsAt: null }, { endsAt: { gt: at } }] }, select: { positionId: true } }),
       prisma.delegation.findMany({ where: { delegateId: userId, startsAt: { lte: at }, endsAt: { gt: at } }, select: { positionId: true } })
@@ -361,7 +364,7 @@ export class RequestService {
   async inbox(user: { id: string; companyId: string }) {
     const positionIds = await this.actablePositionIds(user.id);
     const steps = await prisma.requestStep.findMany({
-      where: { result: 'PENDING', request: { companyId: user.companyId, status: 'IN_PROGRESS', NOT: { agentId: user.id } }, OR: [{ assigneeId: user.id }, ...(positionIds.length ? [{ positionId: { in: positionIds } }] : [])] },
+      where: { result: 'PENDING', request: { companyId: user.companyId, status: 'IN_PROGRESS', NOT: { agentId: user.id } }, OR: [{ assigneeId: user.id }, ...(positionIds.length ? [{ positionId: { in: positionIds } }, { escalatedAt: { not: null }, escalatePositionId: { in: positionIds } }] : [])] },
       include: { request: { include: this.baseInclude } }
     });
     const mine: any[] = [];
@@ -370,18 +373,23 @@ export class RequestService {
       if (s.round !== r.round) continue;
       const first = r.steps.filter(x => x.round === r.round && x.result === 'PENDING').sort((a, b) => a.order - b.order)[0];
       if (first?.id !== s.id) continue; // pas encore l'étape active
-      if (s.positionId) { const t = await prisma.requestType.findUnique({ where: { id: r.typeId } }); if (!(await workflowService.canActOnPosition(user.id, s.positionId, t!.code))) continue; }
+      if (s.positionId) {
+        const t = await prisma.requestType.findUnique({ where: { id: r.typeId } });
+        let ok = await workflowService.canActOnPosition(user.id, s.positionId, t!.code);
+        if (!ok && s.escalatedAt && s.escalatePositionId && await rulesService.get<boolean>(user.companyId, 'escalation.substitute_can_act')) ok = await workflowService.canActOnPosition(user.id, s.escalatePositionId, t!.code);
+        if (!ok) continue;
+      }
       mine.push({ ...this.shape(r), activeStep: { id: s.id, label: s.label, kind: s.kind, dueAt: s.dueAt, overdue: !!s.dueAt && s.dueAt < new Date() } });
     }
     return mine.sort((a, b) => +new Date(a.activeStep.dueAt ?? a.submittedAt ?? 0) - +new Date(b.activeStep.dueAt ?? b.submittedAt ?? 0));
   }
 
   /** Droit de consultation : administrateurs de la société, ou personne impliquée dans le circuit de la demande. */
-  private async canView(user: { id: string; companyId: string; role: string }, r: { companyId: string; steps: { positionId: string | null; assigneeId: string | null; actorId: string | null }[] }) {
+  private async canView(user: { id: string; companyId: string; role: string }, r: { companyId: string; steps: { positionId: string | null; escalatePositionId: string | null; assigneeId: string | null; actorId: string | null }[] }) {
     if (r.companyId !== user.companyId) return false;
     if (['ADMIN', 'SUPER_ADMIN'].includes(user.role)) return true;
     const positionIds = await this.actablePositionIds(user.id);
-    return r.steps.some(s => s.assigneeId === user.id || s.actorId === user.id || (s.positionId && positionIds.includes(s.positionId)));
+    return r.steps.some(s => s.assigneeId === user.id || s.actorId === user.id || (s.positionId && positionIds.includes(s.positionId)) || (s.escalatePositionId && positionIds.includes(s.escalatePositionId)));
   }
 
   async detail(requestId: string, user: { id: string; companyId: string; role: string }, quiet = false, req?: any) {

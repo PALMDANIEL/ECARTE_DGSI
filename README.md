@@ -24,4 +24,4 @@ Le mot de passe du seed se change avec `SEED_ADMIN_PASSWORD` (et l'email avec `S
 ## Module « Demandes administratives » (en cours)
 
 Gestion des cartes professionnelles à QR code, des agents et de l'organisation, puis des demandes de congé, décisions, jouissances et autorisations d'absence.
-Conception : [docs/module-demandes/CONCEPTION.md](docs/module-demandes/CONCEPTION.md) — Phase 1 (livrée) : [docs/module-demandes/PHASE-1.md](docs/module-demandes/PHASE-1.md) · Phase 2 (livrée) : [docs/module-demandes/PHASE-2.md](docs/module-demandes/PHASE-2.md) · Phase 3 (livrée) : [docs/module-demandes/PHASE-3.md](docs/module-demandes/PHASE-3.md).
+Conception : [docs/module-demandes/CONCEPTION.md](docs/module-demandes/CONCEPTION.md) — Phase 1 (livrée) : [docs/module-demandes/PHASE-1.md](docs/module-demandes/PHASE-1.md) · Phase 2 (livrée) : [docs/module-demandes/PHASE-2.md](docs/module-demandes/PHASE-2.md) · Phase 3 (livrée) : [docs/module-demandes/PHASE-3.md](docs/module-demandes/PHASE-3.md) · Phase 4 (livrée) : [docs/module-demandes/PHASE-4.md](docs/module-demandes/PHASE-4.md).

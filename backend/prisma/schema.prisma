@@ -237,6 +237,7 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([userId, isRead, createdAt])
   @@map("notifications")
 }
 
@@ -554,6 +555,9 @@ model RequestStep {
   rejectOnUnfavorable Boolean    @default(false)
   allowReturn         Boolean    @default(true)
   deadlineDays        Int?
+  escalatePositionId  String?
+  reminderSentAt      DateTime?
+  escalatedAt         DateTime?
   note                String?
 
   @@index([requestId, round, order])

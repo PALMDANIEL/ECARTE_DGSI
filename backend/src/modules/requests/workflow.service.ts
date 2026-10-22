@@ -35,6 +35,7 @@ export interface ResolvedStep {
   allowReturn: boolean;
   rejectOnUnfavorable: boolean;
   deadlineDays: number | null;
+  escalatePositionId: string | null;
   skippedReason?: string;
 }
 
@@ -235,7 +236,7 @@ export class WorkflowService {
         approverName = `${r.user.firstName} ${r.user.lastName}`;
       }
       const heading = s.label || `${KIND_PREFIX[s.kind]} ${/^[aeiouyh]/i.test(lowerFirst(title)) ? "d'" : 'de '}${title}`.replace(/ d'(Monsieur|Madame)/, ' de $1');
-      steps.push({ order: s.order, kind: s.kind, label, heading, positionId, assigneeId, titleSnapshot: title!, approverName, allowReturn: s.allowReturn, rejectOnUnfavorable: s.rejectOnUnfavorable, deadlineDays: s.deadlineDays });
+      steps.push({ order: s.order, kind: s.kind, label, heading, positionId, assigneeId, titleSnapshot: title!, approverName, allowReturn: s.allowReturn, rejectOnUnfavorable: s.rejectOnUnfavorable, deadlineDays: s.deadlineDays, escalatePositionId: s.escalatePositionId });
     }
     // L'étape de décision doit rester présente (sinon la demande n'aurait pas d'issue)
     if (!steps.some(s => s.kind === 'DECISION') && !unresolved.some(u => wf.steps.find(w => w.order === u.order)?.kind === 'DECISION')) {

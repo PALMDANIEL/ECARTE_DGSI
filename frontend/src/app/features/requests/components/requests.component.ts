@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { isAdminRole } from '../../../core/auth/role';
 import { AdminApiService, OrgUnit } from '../../admin/services/admin-api.service';
@@ -98,12 +99,14 @@ export class RequestsComponent implements OnInit {
   statuses = Object.entries(STATUS_LABEL).filter(([k]) => k !== 'DRAFT').map(([v, l]) => ({ v, l }));
   selectedId: string | null = null; showDetail = false; canAct = false;
 
-  constructor(private api: RequestsApiService, private adminApi: AdminApiService) {}
+  constructor(private api: RequestsApiService, private adminApi: AdminApiService, private route: ActivatedRoute) {}
 
   get pages() { return Math.max(1, Math.ceil(this.total / this.limit)); }
   label(s: string) { return STATUS_LABEL[s] || s; }
 
   ngOnInit() {
+    const openId = this.route.snapshot.queryParamMap.get('open');
+    if (openId) { this.selectedId = openId; this.canAct = true; this.showDetail = true; }
     this.q$.pipe(debounceTime(300)).subscribe(() => { this.page = 1; this.loadAll(); });
     if (this.admin) this.adminApi.orgUnits().subscribe(u => (this.units = u.filter(x => x.isActive)));
     this.loadInbox();
