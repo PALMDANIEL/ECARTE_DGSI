@@ -62,7 +62,7 @@ import { AdminApiService, Agent, Delegation, OrgUnit, Position } from '../servic
           <div class="ec-form-grid">
             <div class="p-field"><label>Code *</label><input pInputText formControlName="code" placeholder="CHEF_SERVICE_RH" [readonly]="!!editing" /></div>
             <div class="p-field"><label>Civilité du titulaire</label>
-              <select class="ec-select" formControlName="civility"><option value="">—</option><option value="M">Monsieur</option><option value="MME">Madame</option></select></div>
+              <select class="ec-select" formControlName="civility"><option value="">Selon le titulaire</option><option value="M">Monsieur</option><option value="MME">Madame</option></select></div>
             <div class="p-field full"><label>Intitulé *</label><input pInputText formControlName="label" placeholder="Chef du service des ressources humaines" /></div>
             <div class="p-field full"><label>Unité</label>
               <select class="ec-select" formControlName="orgUnitId"><option value="">— Aucune —</option><option *ngFor="let u of units" [value]="u.id">{{ u.name }} ({{ u.code }})</option></select></div>

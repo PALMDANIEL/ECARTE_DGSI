@@ -7,6 +7,12 @@ import { escalationService } from './modules/requests/escalation.service';
 import { cardPdfService } from './modules/business-cards/services/card-pdf.service';
 
 
+// En production, refuser de démarrer avec les secrets par défaut (jetons forgeables)
+if (process.env.NODE_ENV === 'production') {
+  const missing = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'CARD_TOKEN_KEY'].filter(k => !process.env[k] || /^default_/.test(process.env[k]!));
+  if (missing.length) { logger.error(`Variables obligatoires en production : ${missing.join(', ')}`); process.exit(1); }
+}
+
 const PORT = config.port || 3001;
 app.listen(PORT, '0.0.0.0', () => {
   logger.info('Server running on port ' + PORT);

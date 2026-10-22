@@ -77,7 +77,8 @@ describe('circuits : création d\'après les formulaires', () => {
     expect(ok.body.unresolved).toEqual([]);
     expect(ok.body.steps.map((s: any) => s.approverName)).toEqual(['Didier Directeur', 'Denis DG', 'Diane DRH', 'Samuel Secrétaire', 'Marie Ministre']);
     expect(ok.body.steps[0].heading).toBe("Avis de Monsieur le Directeur de l'Ingénierie logicielle et de l'Exploitation");
-    expect(ok.body.steps[4].heading).toBe('Décision de Monsieur le Ministre');
+    // le poste généré ne fige pas la civilité : celle de la titulaire en fonction s'applique
+    expect(ok.body.steps[4].heading).toBe('Décision de Madame la Ministre');
   });
 
   it('applique les étapes conditionnelles et la résolution par supérieur hiérarchique', async () => {

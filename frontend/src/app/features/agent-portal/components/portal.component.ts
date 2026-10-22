@@ -55,6 +55,12 @@ type Step = 'loading' | 'invalid' | 'pin' | 'file';
             <dt *ngIf="file.card.number">Carte n°</dt><dd *ngIf="file.card.number">{{ file.card.number }} <span class="pt-hint" *ngIf="file.card.expiresAt">(valable jusqu'au {{ file.card.expiresAt | date:'dd/MM/yyyy' }})</span></dd>
           </dl>
 
+          <div class="pt-notes" *ngIf="notes.length">
+            <div class="pt-notes-head"><strong><i class="pi pi-bell"></i> {{ unread }} nouvelle(s) information(s)</strong>
+              <a href="javascript:void(0)" (click)="readNotes()">Marquer comme lu</a></div>
+            <ul><li *ngFor="let n of notes">{{ n.message }} <span class="pt-hint">{{ n.createdAt | date:'dd/MM HH:mm' }}</span></li></ul>
+          </div>
+
           <app-portal-requests (expired)="onExpired()"></app-portal-requests>
 
           <p class="pt-hint" style="margin-top:14px">Session ouverte pour {{ minutes }} minutes. <a href="javascript:void(0)" (click)="close()">Fermer la session</a></p>
@@ -81,6 +87,9 @@ type Step = 'loading' | 'invalid' | 'pin' | 'file';
     .pt-btn { width: 100%; margin-top: 14px; padding: 14px; border: none; border-radius: 12px; background: var(--ec-ink); color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
     .pt-btn:disabled { opacity: .5; cursor: not-allowed; }
     .pt-error { margin-top: 10px; padding: 10px 12px; background: #FBEAEA; color: var(--ec-coral); border-radius: 10px; font-size: .88rem; }
+    .pt-notes { border: 1px solid var(--ec-brass); background: #FBF3E3; border-radius: 12px; padding: 10px 12px; margin: 0 0 16px; font-size: .86rem; }
+    .pt-notes-head { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .pt-notes ul { margin: 0; padding-left: 18px; } .pt-notes li { margin: 4px 0; }
     .pt-warn { padding: 12px; background: #FBF3E3; color: #7a5a16; border-radius: 10px; font-size: .9rem; }
     .pt-dl { display: grid; grid-template-columns: 1fr 1.6fr; gap: 8px 12px; font-size: .88rem; margin: 0 0 16px; }
     .pt-dl dt { color: var(--ec-ink-soft); } .pt-dl dd { margin: 0; font-weight: 500; }
@@ -94,6 +103,7 @@ export class PortalComponent implements OnInit, OnDestroy {
   step: Step = 'loading';
   scan: ScanResult | null = null;
   file: AgentFile | null = null;
+  notes: { id: string; message: string; createdAt: string }[] = []; unread = 0;
   pin = ''; message = ''; busy = false; locked = false; minutes = 0;
   private token = '';
   private timer: any;
@@ -121,6 +131,7 @@ export class PortalComponent implements OnInit, OnDestroy {
         this.busy = false; this.pin = '';
         this.portal.sessionToken = r.sessionToken;
         this.file = r; this.minutes = r.expiresInMinutes; this.step = 'file';
+        this.portal.notifications().subscribe({ next: n => { this.notes = n.items; this.unread = n.unread; }, error: () => {} });
         // La session vit uniquement en mémoire (jamais dans localStorage) et se ferme à l'échéance
         this.timer = setTimeout(() => this.close(), r.expiresInMinutes * 60000);
       },
@@ -136,7 +147,9 @@ export class PortalComponent implements OnInit, OnDestroy {
     });
   }
 
+  readNotes() { this.portal.readAllNotifications().subscribe(() => { this.notes = []; this.unread = 0; }); }
+
   onExpired() { this.close(); this.message = 'Votre session a expiré ou la carte n\'est plus valide. Scannez à nouveau votre carte.'; }
 
-  close() { this.portal.sessionToken = null; this.file = null; this.pin = ''; this.step = 'pin'; clearTimeout(this.timer); }
+  close() { this.portal.sessionToken = null; this.file = null; this.notes = []; this.unread = 0; this.pin = ''; this.step = 'pin'; clearTimeout(this.timer); }
 }

@@ -6,6 +6,11 @@ export interface AuthRequest extends Request { user?: { id: string; email: strin
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' });
-  try { req.user = jwt.verify(authHeader.split(' ')[1], config.jwtSecret) as any; next(); } catch (error) { logger.error('JWT failed', { error }); return res.status(401).json({ message: 'Invalid token' }); }
+  try {
+    const payload = jwt.verify(authHeader.split(' ')[1], config.jwtSecret) as any;
+    // Seuls les jetons de session (typ « access ») ouvrent l'API : un lien de réinitialisation ou de vérification n'est pas une session
+    if (payload?.typ !== 'access') return res.status(401).json({ message: 'Invalid token' });
+    req.user = payload; next();
+  } catch (error) { logger.error('JWT failed', { error }); return res.status(401).json({ message: 'Invalid token' }); }
 };
 export const authorize = (...roles: string[]) => (req: AuthRequest, res: Response, next: NextFunction) => { if (!req.user) return res.status(401).json({ message: 'Unauthorized' }); if (!roles.includes(req.user.role)) return res.status(403).json({ message: 'Forbidden' }); next(); };

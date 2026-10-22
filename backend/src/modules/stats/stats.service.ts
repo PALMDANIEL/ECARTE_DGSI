@@ -2,7 +2,7 @@ import { Prisma, RequestStatus } from '@prisma/client';
 import { prisma } from '../../database/client';
 import { AppError } from '../../shared/errors/app-error';
 import { orgService } from '../org/org.service';
-import { LEAVE_TYPE } from '../leave/leave.service';
+import { LEAVE_TYPE, leaveService } from '../leave/leave.service';
 import { requestService } from '../requests/request.service';
 
 const DAY = 86_400_000;
@@ -11,6 +11,7 @@ const MAX_ROWS = 20000;
 export interface StatsUser { id: string; companyId: string; role: string }
 export interface StatsFilter { from?: Date; to?: Date; typeCode?: string; status?: RequestStatus; orgUnitId?: string; agentId?: string; positionId?: string }
 
+const r2 = (n: number) => Math.round(n * 100) / 100 + 0;
 const round1 = (n: number) => Math.round(n * 10) / 10;
 const avg = (xs: number[]) => (xs.length ? round1(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
 const isAdmin = (u: StatsUser) => ['ADMIN', 'SUPER_ADMIN'].includes(u.role);
@@ -138,6 +139,9 @@ export class StatsService {
   async balances(user: StatsUser, year: number, orgUnitId?: string) {
     if (!isAdmin(user)) throw new AppError('Réservé aux administrateurs', 403);
     const ids = orgUnitId ? await orgService.subtreeIds(user.companyId, orgUnitId) : null;
+    // Inscrit le droit annuel des agents éligibles qui n'ont encore rien consulté (idempotent), sinon ils apparaîtraient à 0
+    const eligible = await prisma.agentProfile.findMany({ where: { companyId: user.companyId, user: { isActive: true }, ...(ids ? { orgUnitId: { in: ids } } : {}) }, select: { userId: true } });
+    for (const p of eligible) await leaveService.ensureAcquired(prisma, p.userId, year);
     const [profiles, ledger, absences] = await Promise.all([
       prisma.agentProfile.findMany({ where: { companyId: user.companyId, user: { isActive: true }, ...(ids ? { orgUnitId: { in: ids } } : {}) }, include: { user: { select: { id: true, firstName: true, lastName: true } }, orgUnit: { select: { name: true } } }, orderBy: { matricule: 'asc' } }),
       prisma.leaveLedger.groupBy({ by: ['agentId', 'leaveType', 'nature'], where: { companyId: user.companyId, year }, _sum: { days: true } }),
@@ -149,9 +153,10 @@ export class StatsService {
     return profiles.map(p => {
       const m = by.get(p.userId) || {};
       const sum = (nature: string, type = LEAVE_TYPE) => m[`${type}:${nature}`] || 0;
-      const acquired = sum('ACQUIS') + sum('REPORT'), consumed = sum('CONSOMME'), adj = sum('REGULARISATION');
-      const absenceUsed = Object.entries(m).filter(([k]) => !k.startsWith(LEAVE_TYPE + ':') && k.endsWith(':CONSOMME')).reduce((a, [, v]) => a + v, 0);
-      return { agentId: p.userId, matricule: p.matricule, name: `${p.user.firstName} ${p.user.lastName}`, unit: p.orgUnit?.name ?? null, year, acquired, authorized: decided.get(p.userId) || 0, consumed, adjustments: adj, remaining: acquired - consumed + adj, absenceDays: absenceUsed };
+      // Même convention que leaveService.balance : les consommations sont inscrites en négatif au registre
+      const acquired = sum('ACQUIS') + sum('REPORT'), consumed = -sum('CONSOMME'), adj = sum('REGULARISATION');
+      const absenceUsed = -Object.entries(m).filter(([k]) => !k.startsWith(LEAVE_TYPE + ':') && k.endsWith(':CONSOMME')).reduce((a, [, v]) => a + v, 0);
+      return { agentId: p.userId, matricule: p.matricule, name: `${p.user.firstName} ${p.user.lastName}`, unit: p.orgUnit?.name ?? null, year, acquired: r2(acquired), authorized: decided.get(p.userId) || 0, consumed: r2(consumed), adjustments: r2(adj), remaining: r2(acquired - consumed + adj), absenceDays: r2(absenceUsed) };
     });
   }
 }

@@ -271,6 +271,17 @@ describe('statistiques', () => {
     const me = rows.find((r: any) => r.agentId === sc.agent.id);
     expect(me).toMatchObject({ matricule: 'M-0001', acquired: 30, authorized: 30, consumed: 0, remaining: 30 });
     expect((await get(`/api/stats/balances?orgUnitId=${sc.units.DLE}`, sc.H)).body.find((r: any) => r.agentId === sc.agent.id)).toBeTruthy();
+
+    // cohérence avec le calcul des droits : consommation (négative au registre) et régularisation
+    const y = new Date().getUTCFullYear();
+    await prisma.$executeRaw`INSERT INTO "leave_ledger" ("id","companyId","agentId","leaveType","year","nature","days","reason") VALUES (gen_random_uuid()::text, ${sc.t.company.id}, ${sc.agent.id}, 'CONGE_ANNUEL', ${y}, 'CONSOMME'::"LedgerNature", -12, 'test')`;
+    await post('/api/leave/regularisations', sc.H, { agentId: sc.agent.id, leaveType: 'CONGE_ANNUEL', year: y, days: 2, reason: 'Jours rendus après annulation' });
+    const after = (await get('/api/stats/balances', sc.H)).body.find((r: any) => r.agentId === sc.agent.id);
+    const { leaveService } = await import('../src/modules/leave/leave.service');
+    const ref = await leaveService.balance(sc.agent.id, y);
+    expect(after).toMatchObject({ consumed: 12, adjustments: 2, remaining: 20 });
+    expect(after.remaining).toBe(ref.remaining);
+    expect(after.consumed).toBe(ref.consumed);
   });
 
   it('exporte en CSV avec BOM et neutralise les formules', async () => {

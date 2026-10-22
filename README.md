@@ -1,27 +1,26 @@
-# SmartCard Pro
+# ECARTE
 
-Plateforme SaaS de cartes de visite numériques.
+Cartes professionnelles à QR code sécurisé et **demandes administratives** des agents publics : décision de congé, jouissance de congé, autorisation d'absence — avec circuits de validation paramétrables, documents PDF officiels, droits et soldes (loi 081-2015/CNT), notifications, escalades de délais et pilotage. Les cartes de visite numériques d'origine restent disponibles.
 
-## Installation
-
-- Backend : `cd backend && npm install`
-- Frontend : `cd frontend && npm install`
-- Démarrer avec Docker : `docker-compose up -d`
-
-## Base de données (PostgreSQL local)
-
-1. Créer une base `ecarte` (pgAdmin ou `createdb ecarte`).
-2. Renseigner `DATABASE_URL` dans `backend/.env`, par ex. `postgresql://postgres:postgres@localhost:5433/ecarte?schema=public`.
-3. Depuis `backend/` :
+## Démarrage rapide
 
 ```bash
-npx prisma migrate deploy   # crée les tables
-npm run seed                # société ECARTE + compte SUPER_ADMIN (admin@ecarte.local)
+cd backend && npm install && cp .env.example .env   # compléter .env
+npx prisma migrate deploy && npm run seed && npm run dev
+cd ../frontend && npm install && npx ng serve
 ```
 
-Le mot de passe du seed se change avec `SEED_ADMIN_PASSWORD` (et l'email avec `SEED_ADMIN_EMAIL`).
+Base PostgreSQL locale : créer `ecarte` (pgAdmin ou `createdb ecarte`) et renseigner `DATABASE_URL`, par ex. `postgresql://postgres:postgres@localhost:5433/ecarte?schema=public`. Le seed crée un compte SUPER_ADMIN (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Démarrer avec Docker : `docker-compose up -d`.
 
-## Module « Demandes administratives » (en cours)
+## Documentation
 
-Gestion des cartes professionnelles à QR code, des agents et de l'organisation, puis des demandes de congé, décisions, jouissances et autorisations d'absence.
-Conception : [docs/module-demandes/CONCEPTION.md](docs/module-demandes/CONCEPTION.md) — Phase 1 (livrée) : [docs/module-demandes/PHASE-1.md](docs/module-demandes/PHASE-1.md) · Phase 2 (livrée) : [docs/module-demandes/PHASE-2.md](docs/module-demandes/PHASE-2.md) · Phase 3 (livrée) : [docs/module-demandes/PHASE-3.md](docs/module-demandes/PHASE-3.md) · Phase 4 (livrée) : [docs/module-demandes/PHASE-4.md](docs/module-demandes/PHASE-4.md).
+- [Guide d'utilisation](docs/GUIDE-UTILISATION.md) — administrateur, responsable, agent
+- [Installation, exploitation et sécurité](docs/EXPLOITATION.md) — variables, migrations, sauvegarde, mise en production, base de démonstration
+- Module « Demandes administratives » : [conception](docs/module-demandes/CONCEPTION.md) · phases [1](docs/module-demandes/PHASE-1.md) (organisation, agents, cartes, audit) · [2](docs/module-demandes/PHASE-2.md) (circuits, demandes, PDF) · [3](docs/module-demandes/PHASE-3.md) (droits et soldes) · [4](docs/module-demandes/PHASE-4.md) (notifications, escalades, pilotage) · [5](docs/module-demandes/PHASE-5.md) (bout en bout, non-régression, traçabilité)
+
+## Tests
+
+```bash
+cd backend && npx jest --forceExit   # base de test créée et migrée automatiquement
+cd frontend && npx ng build
+```

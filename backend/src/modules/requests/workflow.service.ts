@@ -222,9 +222,11 @@ export class WorkflowService {
       let positionId: string | null = null, assigneeId: string | null = null, title: string, approverName: string | null = null;
       if (r.position) {
         positionId = r.position.id;
-        title = addressTitle(r.position.civility, r.position.label);
         const { holders, delegates } = await this.actingUsers(r.position.id, typeCode);
         const acting = holders[0] || delegates[0];
+        // Civilité imposée par le poste, sinon celle du titulaire en fonction (« Madame la Ministre »)
+        const holderCivility = holders[0] ? (await prisma.agentProfile.findUnique({ where: { userId: holders[0].id }, select: { civility: true } }))?.civility : null;
+        title = addressTitle(r.position.civility || holderCivility, r.position.label);
         if (!acting && s.isMandatory) { unresolved.push({ order: s.order, label: title, reason: `le poste « ${r.position.label} » est vacant` }); continue; }
         if (!acting) { skipped.push({ order: s.order, label: title, reason: 'poste vacant' }); continue; }
         if ([...holders, ...delegates].some(u => u.id === agentId)) { skipped.push({ order: s.order, label: title, reason: 'l\'agent est lui-même titulaire du poste' }); continue; }
@@ -267,7 +269,7 @@ export class WorkflowService {
     const ensurePosition = async (code: string, label: string, level: number, orgUnitId?: string) => {
       const existing = await prisma.position.findUnique({ where: { companyId_code: { companyId, code } } });
       if (existing) return existing;
-      const p = await prisma.position.create({ data: { companyId, code, label, level, orgUnitId: orgUnitId ?? null, civility: 'M' } });
+      const p = await prisma.position.create({ data: { companyId, code, label, level, orgUnitId: orgUnitId ?? null, civility: null } });
       createdPositions.push(`${p.code} — ${p.label}`);
       return p;
     };

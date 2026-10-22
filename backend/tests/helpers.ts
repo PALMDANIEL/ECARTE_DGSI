@@ -35,7 +35,7 @@ export async function makeUser(companyId: string, role: 'SUPER_ADMIN' | 'ADMIN' 
   const user = await prisma.user.create({
     data: { firstName: extra.firstName || 'Prénom' + n, lastName: extra.lastName || 'Nom' + n, email: `user${n}@test.local`, password: await bcrypt.hash('Password123', 4), companyId, role, isVerified: true }
   });
-  return { user, token: jwt.sign({ id: user.id, email: user.email, companyId, role }, config.jwtSecret, { expiresIn: '1h' }) };
+  return { user, token: jwt.sign({ id: user.id, email: user.email, companyId, role, typ: 'access' }, config.jwtSecret, { expiresIn: '1h' }) };
 }
 
 /** Attend qu'une condition soit vraie (effets asynchrones « fire and forget »), au lieu d'un délai fixe fragile. */
@@ -48,7 +48,7 @@ export async function waitFor(check: () => Promise<boolean>, timeoutMs = 10000, 
 /** Jeton d'administration pour un utilisateur existant (responsable, titulaire de poste…). */
 export async function tokenFor(userId: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MANAGER' | 'EMPLOYEE' = 'EMPLOYEE') {
   const u = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-  return jwt.sign({ id: u.id, email: u.email, companyId: u.companyId, role }, config.jwtSecret, { expiresIn: '1h' });
+  return jwt.sign({ id: u.id, email: u.email, companyId: u.companyId, role, typ: 'access' }, config.jwtSecret, { expiresIn: '1h' });
 }
 
 export const auth = (token: string) => ({ Authorization: `Bearer ${token}` });

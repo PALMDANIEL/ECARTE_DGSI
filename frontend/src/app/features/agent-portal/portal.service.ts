@@ -65,6 +65,8 @@ export class PortalService {
     return this.http.post<{ id: string; name: string; size: number; code: string | null }>(`${this.api}/requests/${id}/attachments`, fd, this.opts());
   }
   removeAttachment(id: string, attId: string) { return this.http.delete<void>(`${this.api}/requests/${id}/attachments/${attId}`, this.opts()); }
+  notifications() { return this.http.get<{ items: { id: string; message: string; createdAt: string; isRead: boolean }[]; unread: number }>(`${this.api}/notifications?unread=true&limit=5`, this.opts()); }
+  readAllNotifications() { return this.http.post<{ updated: number }>(`${this.api}/notifications/read-all`, {}, this.opts()); }
   documentBlob(id: string) { return this.http.get(`${this.api}/requests/${id}/document`, { ...this.opts(), responseType: 'blob' }); }
 
   me(sessionToken: string): Observable<AgentFile> {
