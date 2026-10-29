@@ -7,10 +7,11 @@ async function main() {
   const email = process.env.SEED_ADMIN_EMAIL || 'admin@ecarte.local';
   const password = process.env.SEED_ADMIN_PASSWORD || 'Admin@12345';
 
+  const companyName = process.env.SEED_COMPANY_NAME || 'ECARTE';
   const company = await prisma.company.upsert({
-    where: { name: 'ECARTE' },
+    where: { name: companyName },
     update: {},
-    create: { name: 'ECARTE', email },
+    create: { name: companyName, email },
   });
 
   await prisma.user.upsert({

@@ -9,3 +9,6 @@ uploads
 # Documents administratifs privés (PDF des demandes, pièces jointes) : jamais publics, jamais versionnés
 private-storage
 *.local.txt
+.vercel
+.env*
+!.env.example

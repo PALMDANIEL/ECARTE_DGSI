@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd backend && npm ci && cd ../frontend && npm ci",
+  "buildCommand": "cd backend && npx prisma generate && DATABASE_URL=\"$DIRECT_URL\" npx prisma migrate deploy && if [ -n \"$SEED_ADMIN_PASSWORD\" ]; then npx ts-node prisma/seed.ts; fi && npm run build && cd ../frontend && npx ng build --configuration vercel",
+  "outputDirectory": "frontend/dist/smartcard-pro",
+  "regions": ["fra1"],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60,
+      "includeFiles": "backend/{dist/assets/**,node_modules/@sparticuz/chromium/bin/**,node_modules/.prisma/client/**}"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/uploads/(.*)", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [{ "path": "/api/cron/escalations", "schedule": "0 6 * * *" }]
+}

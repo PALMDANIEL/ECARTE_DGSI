@@ -1,0 +1,16 @@
+# Jamais envoyé à Vercel : secrets, dépendances (réinstallées), données locales
+.env
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/dist
+uploads
+**/uploads
+private-storage
+**/private-storage
+*.local.txt
+**/*.local.txt
+.DS_Store
+**/.DS_Store
+backend/coverage

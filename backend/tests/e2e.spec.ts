@@ -1,5 +1,5 @@
 import { app, prisma, request, resetDb, auth } from './helpers';
-import { inDays } from './requests-helpers';
+import { inDays, inYear } from './requests-helpers';
 import { EmailService } from '../src/infrastructure/email';
 import { PNG } from 'pngjs';
 import jsQR from 'jsqr';
@@ -181,7 +181,7 @@ describe('parcours complet d\'une administration et d\'un agent', () => {
     // --- 3. Absence pour événement familial, retournée pour correction puis approuvée
     const types: any[] = ok(await get('/api/access/absence-types', agent));
     const family = types.find(t => t.code === 'EVENEMENT_FAMILIAL');
-    const aaFields = { absenceTypeId: family.id, startDate: inDays(5), endDate: inDays(7), motif: 'mariage' };
+    const aaFields = { absenceTypeId: family.id, startDate: inYear(5), endDate: inYear(7), motif: 'mariage' };
     const aa = ok(await post('/api/access/requests', agent, { typeCode: 'AUTORISATION_ABSENCE', fields: aaFields }), 201);
     ok(await post(`/api/access/requests/${aa.id}/submit`, agent));
     const ret = await decide(P.A004, aa.id, { action: 'RETURN', comment: 'Précisez le lien de parenté' });
@@ -191,7 +191,7 @@ describe('parcours complet d\'une administration et d\'un agent', () => {
     await decide(P.A004, aa.id, { action: 'FAVORABLE' });
     expect((await decide(P.A007, aa.id, { action: 'APPROVE' })).status).toBe('APPROVED');
     // plafond annuel : 10 jours, 3 consommés → 8 jours supplémentaires refusés
-    const tooMuch = await post('/api/access/requests/preview', agent, { typeCode: 'AUTORISATION_ABSENCE', fields: { ...aaFields, startDate: inDays(60), endDate: inDays(67) } });
+    const tooMuch = await post('/api/access/requests/preview', agent, { typeCode: 'AUTORISATION_ABSENCE', fields: { ...aaFields, startDate: inYear(40), endDate: inYear(47) } });
     expect(JSON.stringify(tooMuch.body.errors)).toMatch(/plafond|jours/i);
 
     // --- 4. Pilotage
@@ -201,7 +201,10 @@ describe('parcours complet d\'une administration et d\'un agent', () => {
     expect(stats.absences.approvedLeaveEnjoymentDays).toBe(15);
     expect(stats.cards).toMatchObject({ total: 1, active: 1 });
     const balances: any[] = ok(await get(`/api/stats/balances?year=${year}`, a.H));
-    expect(balances.find(b => b.matricule === 'A008')).toMatchObject({ acquired: 30, authorized: 30, consumed: 15, remaining: 15, absenceDays: 3 });
+    expect(balances.find(b => b.matricule === 'A008')).toMatchObject({ acquired: 30, authorized: 30, consumed: 15, remaining: 15 });
+    // les 3 jours d'absence sont comptés sur l'année où ils tombent
+    const absenceYear = Number(inYear(5).slice(0, 4));
+    expect((ok(await get(`/api/stats/balances?year=${absenceYear}`, a.H)) as any[]).find(b => b.matricule === 'A008').absenceDays).toBe(3);
     // les agents qui n'ont rien consulté apparaissent avec leur droit réel, pas à 0
     expect(balances.find(b => b.matricule === 'A002')).toMatchObject({ acquired: 30, consumed: 0, remaining: 30 });
     const csv = await get('/api/stats/requests.csv', a.H);

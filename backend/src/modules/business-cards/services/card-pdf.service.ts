@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer-core';
+import { launchBrowser } from '../../../infrastructure/pdf/browser';
 import * as fs from 'fs';
 import * as path from 'path';
 import { BusinessCard } from '@prisma/client';
@@ -13,10 +14,8 @@ export class CardPdfService {
 
   private getBrowser(): Promise<Browser> {
     if (!this.browserPromise) {
-      this.browserPromise = puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
+      this.browserPromise = launchBrowser();
+      this.browserPromise.catch(() => { this.browserPromise = null; });
     }
     return this.browserPromise;
   }

@@ -20,7 +20,9 @@ export type ActAction = 'FAVORABLE' | 'UNFAVORABLE' | 'APPROVE' | 'REJECT' | 'RE
 
 const EDITABLE: string[] = ['DRAFT', 'RETURNED'];
 const MAX_ATTACHMENTS = 10;
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+// 5 Mo par défaut ; MAX_UPLOAD_MB=4 sur Vercel, dont les fonctions refusent les requêtes de plus de 4,5 Mo
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB) || 5;
+const MAX_ATTACHMENT_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png'];
 
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
@@ -289,7 +291,7 @@ export class RequestService {
     const r = await this.ownRequest(requestId, agentId);
     if (!EDITABLE.includes(r.status)) throw new AppError('Les pièces ne peuvent plus être modifiées', 409);
     if (!ALLOWED_MIME.includes(file.mimetype)) throw new AppError('Format non accepté (PDF, JPG ou PNG)', 415);
-    if (file.size > MAX_ATTACHMENT_BYTES) throw new AppError('Fichier trop volumineux (5 Mo maximum)', 413);
+    if (file.size > MAX_ATTACHMENT_BYTES) throw new AppError(`Fichier trop volumineux (${MAX_UPLOAD_MB} Mo maximum)`, 413);
     if (await prisma.requestAttachment.count({ where: { requestId } }) >= MAX_ATTACHMENTS) throw new AppError(`${MAX_ATTACHMENTS} pièces maximum par demande`, 409);
     if (code && !((r.type.attachmentRules as any[]) || []).some(a => a.code === code)) throw new AppError('Type de pièce inconnu', 400);
     const rel = path.join('attachments', requestId, crypto.randomBytes(12).toString('hex'));

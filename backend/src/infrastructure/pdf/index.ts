@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import { launchBrowser } from './browser';
 import QRCode from 'qrcode';
 import { BusinessCard } from '@prisma/client';
 import { buildVCard } from '../../modules/business-cards/services/card-qr.util';
@@ -231,9 +231,7 @@ export class PDFService {
 
     const html = renderCardHtml(card, qrDataUrl, orgLine);
 
-    const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
+    const browser = await launchBrowser();
 
     try {
       const page = await browser.newPage();

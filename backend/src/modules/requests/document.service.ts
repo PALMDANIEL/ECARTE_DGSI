@@ -1,8 +1,7 @@
-import fs from 'fs/promises';
 import path from 'path';
+import { deleteFile, getFile, putFile } from '../../infrastructure/storage';
 import crypto from 'crypto';
 import { prisma } from '../../database/client';
-import { config } from '../../infrastructure/config';
 import { htmlPdfService } from '../../infrastructure/pdf/html-pdf.service';
 import { AppError } from '../../shared/errors/app-error';
 import { canonicalJson, sha256 } from '../../shared/utils/crypto';
@@ -15,18 +14,13 @@ const RESULT_LABEL: Record<string, string> = {
   FAVORABLE: 'Avis favorable', UNFAVORABLE: 'Avis défavorable', APPROVED: 'Approuvé', REJECTED: 'Rejeté', RETURNED: 'Retourné pour correction'
 };
 
-const abs = (rel: string) => path.join(config.privateStorageDir, rel);
-
 export const stepFingerprint = (reference: string, s: { order: number; round: number; result: string; comment: string | null; actorId: string | null; decidedAt: Date | null }) =>
   sha256(canonicalJson([reference, s.round, s.order, s.result, s.comment, s.actorId, s.decidedAt?.toISOString()])).slice(0, 16);
 
-/** Écrit un fichier privé (créant l'arborescence) et renvoie son chemin relatif. */
-export async function writePrivate(rel: string, data: Buffer) {
-  await fs.mkdir(path.dirname(abs(rel)), { recursive: true });
-  await fs.writeFile(abs(rel), data);
-}
-export const readPrivate = (rel: string) => fs.readFile(abs(rel));
-export const removePrivate = (rel: string) => fs.rm(abs(rel), { force: true });
+/** Fichiers privés (PDF, pièces) : disque local ou base selon STORAGE_DRIVER (voir infrastructure/storage). */
+export const writePrivate = (rel: string, data: Buffer) => putFile('private', rel, data);
+export const readPrivate = (rel: string) => getFile('private', rel);
+export const removePrivate = (rel: string) => deleteFile('private', rel);
 
 export class DocumentService {
   /** Contexte complet des modèles : identité, structure, destinataire, champs de la demande, état de chaque étape. */

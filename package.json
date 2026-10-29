@@ -1,0 +1,6 @@
+{
+  "name": "ecarte",
+  "private": true,
+  "description": "Déploiement Vercel : interface Angular (frontend) + API Express en fonction serverless (api/index.js → backend)",
+  "engines": { "node": "22.x" }
+}

@@ -2,6 +2,8 @@
 
 Cartes professionnelles à QR code sécurisé et **demandes administratives** des agents publics : décision de congé, jouissance de congé, autorisation d'absence — avec circuits de validation paramétrables, documents PDF officiels, droits et soldes (loi 081-2015/CNT), notifications, escalades de délais et pilotage. Les cartes de visite numériques d'origine restent disponibles.
 
+**En ligne :** https://ecarte-dgsi.vercel.app (Vercel + base Neon) — voir [Hébergement en ligne](docs/EXPLOITATION.md#hébergement-en-ligne--vercel--neon).
+
 ## Démarrage rapide
 
 ```bash

@@ -4,7 +4,7 @@
   "description": "Backend for SmartCard Pro SaaS",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('src/assets','dist/assets',{recursive:true})\"",
     "start": "node dist/index.js",
     "dev": "nodemon --exec ts-node src/index.ts",
     "test": "jest --coverage",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@sparticuz/chromium": "148.0.0",
     "axios": "^1.4.0",
     "bcrypt": "^5.1.0",
     "class-transformer": "^0.5.1",
@@ -32,6 +33,7 @@
     "nodemailer": "^6.9.3",
     "pdfkit": "^0.14.0",
     "puppeteer": "^24.43.1",
+    "puppeteer-core": "24.43.1",
     "qrcode": "^1.5.4",
     "reflect-metadata": "^0.1.13",
     "swagger-jsdoc": "^6.2.8",

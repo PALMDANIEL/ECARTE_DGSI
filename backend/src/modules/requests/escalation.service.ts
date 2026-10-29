@@ -73,6 +73,14 @@ export class EscalationService {
     return report;
   }
 
+  private lastSweep = new Map<string, number>();
+  /** Balayage d'une société si le dernier date de plus de 10 minutes sur cette instance (idempotent de toute façon). */
+  async sweepIfDue(companyId: string, now = Date.now()) {
+    if (now - (this.lastSweep.get(companyId) || 0) < 10 * 60_000) return null;
+    this.lastSweep.set(companyId, now);
+    return this.run(companyId, new Date(now));
+  }
+
   /** Balaye toutes les sociétés (planificateur). */
   async runAll(now = new Date()) {
     const companies = await prisma.company.findMany({ select: { id: true } });

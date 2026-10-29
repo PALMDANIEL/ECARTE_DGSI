@@ -1,8 +1,6 @@
-import { promises as fs } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-
-const UPLOAD_ROOT = path.join(process.cwd(), 'uploads');
+import { putFile } from '../../../infrastructure/storage';
 
 export class FileService {
   /**
@@ -12,14 +10,9 @@ export class FileService {
    * que le contrôleur transforme ensuite en URL absolue.
    */
   async saveFile(file: Express.Multer.File, subfolder: string): Promise<string> {
-    const targetDir = path.join(UPLOAD_ROOT, subfolder);
-    await fs.mkdir(targetDir, { recursive: true });
-
     const ext = this.getSafeExtension(file.mimetype, file.originalname);
     const filename = `${crypto.randomBytes(16).toString('hex')}${ext}`;
-    const fullPath = path.join(targetDir, filename);
-
-    await fs.writeFile(fullPath, file.buffer);
+    await putFile('public', `${subfolder}/${filename}`, file.buffer, file.mimetype);
 
     return `/uploads/${subfolder}/${filename}`;
   }
@@ -32,15 +25,10 @@ export class FileService {
    * (utile pour garder une URL stable par carte).
    */
   async saveQRCode(filename: string, buffer: Buffer): Promise<string> {
-    const targetDir = path.join(UPLOAD_ROOT, 'qrcodes');
-    await fs.mkdir(targetDir, { recursive: true });
-
     // Sécurité : on ignore tout chemin dans le filename fourni,
     // on ne garde que le nom de base pour empêcher un path traversal.
     const safeName = path.basename(filename);
-    const fullPath = path.join(targetDir, safeName);
-
-    await fs.writeFile(fullPath, buffer);
+    await putFile('public', `qrcodes/${safeName}`, buffer, 'image/png');
 
     return `/uploads/qrcodes/${safeName}`;
   }

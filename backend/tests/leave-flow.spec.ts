@@ -1,5 +1,5 @@
 import { app, prisma, request, resetDb, auth, makeTenant, makeUser, createAgent, tokenFor } from './helpers';
-import { scenario, Scenario, act, dcFields, submitDecisionRequest, approveDecisionRequest, inDays } from './requests-helpers';
+import { scenario, Scenario, act, dcFields, submitDecisionRequest, approveDecisionRequest, inDays, inYear } from './requests-helpers';
 import { leaveService, LEAVE_TYPE } from '../src/modules/leave/leave.service';
 import { rulesService } from '../src/modules/settings/rules.service';
 
@@ -244,27 +244,27 @@ describe('jouissance : décompte, éligibilité, fractionnement et registre', ()
 describe('autorisations d\'absence : plafonds et décompte', () => {
   it('applique le plafond de 10 jours par an des événements familiaux, réservations en cours comprises', async () => {
     const sc = await scenario();
-    const six = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(10), endDate: inDays(15) }); // 6 jours
+    const six = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(10), endDate: inYear(15) }); // 6 jours
     expect(six.status).toBe(201);
     expect((await submit(sc, six.body.id)).status).toBe(200); // réservés
-    const over = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(30), endDate: inDays(34) }); // 5 jours : 6 + 5 > 10
+    const over = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(30), endDate: inYear(34) }); // 5 jours : 6 + 5 > 10
     expect(over.status).toBe(422);
     expect(over.body.errors.absenceTypeId).toMatch(/Plafond annuel de 10 jour\(s\) dépassé.*6 déjà utilisé\(s\) ou réservé\(s\), 5 demandé/);
-    const four = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(30), endDate: inDays(33) });
+    const four = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(30), endDate: inYear(33) });
     expect(four.status).toBe(201);
     // l'approbation transforme la réservation en consommation, sans double compte
     await approveShort(sc, six.body.id);
-    expect((await leaveService.absenceUsage(sc.agent.id, 'EVENEMENT_FAMILIAL', (await absenceType(sc, 'EVENEMENT_FAMILIAL')).id, new Date(inDays(10)).getUTCFullYear()))).toMatchObject({ consumed: 6 });
-    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(50), endDate: inDays(54) })).status).toBe(422); // 6 + 4 (réservés) déjà…
+    expect((await leaveService.absenceUsage(sc.agent.id, 'EVENEMENT_FAMILIAL', (await absenceType(sc, 'EVENEMENT_FAMILIAL')).id, new Date(inYear(10)).getUTCFullYear()))).toMatchObject({ consumed: 6 });
+    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(50), endDate: inYear(54) })).status).toBe(422); // 6 + 4 (réservés) déjà…
   });
 
   it('ne plafonne pas les absences hors plafond (art. 57) et respecte l\'option de non-application', async () => {
     const sc = await scenario();
-    expect((await aa(sc, 'ACTIVITE_SYNDICALE', { startDate: inDays(10), endDate: inDays(40) })).status).toBe(201); // 31 jours, pas de plafond
-    const big = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(60), endDate: inDays(72) });
+    expect((await aa(sc, 'ACTIVITE_SYNDICALE', { startDate: inYear(10), endDate: inYear(40) })).status).toBe(201); // 31 jours, pas de plafond
+    const big = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(60), endDate: inYear(72) });
     expect(big.status).toBe(422);
     await setRule(sc, 'absence.enforce_cap', false);
-    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(60), endDate: inDays(72) })).status).toBe(201);
+    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(60), endDate: inYear(72) })).status).toBe(201);
   });
 
   it('convertit les heures en jours selon le paramètre (24 h = 1 jour par défaut ; 8 h = journée de travail)', async () => {
@@ -345,15 +345,15 @@ describe('registre des droits : immuabilité et régularisations', () => {
 
   it('une régularisation positive rend des jours d\'absence et rouvre le plafond', async () => {
     const sc = await scenario();
-    const r = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(10), endDate: inDays(19) }); // 10 jours = plafond
+    const r = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(10), endDate: inYear(19) }); // 10 jours = plafond
     await approveShort(sc, (await submit(sc, r.body.id)).body.id);
-    const y = new Date(inDays(10)).getUTCFullYear();
-    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(30) })).status).toBe(422);
+    const y = new Date(inYear(10)).getUTCFullYear();
+    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(30) })).status).toBe(422);
     await post('/api/leave/regularisations', sc.H, { agentId: sc.agent.id, leaveType: 'EVENEMENT_FAMILIAL', year: y, days: 2, reason: 'Absence annulée par le service' });
-    const reopened = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(30), endDate: inDays(31) });
+    const reopened = await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(30), endDate: inYear(31) });
     expect(reopened.status).toBe(201);
     expect((await submit(sc, reopened.body.id)).status).toBe(200); // les 2 jours sont maintenant réservés
-    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inDays(40) })).status).toBe(422);
+    expect((await aa(sc, 'EVENEMENT_FAMILIAL', { startDate: inYear(40) })).status).toBe(422);
   });
 });
 

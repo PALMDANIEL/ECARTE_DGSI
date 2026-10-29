@@ -54,6 +54,15 @@ export type Scenario = Awaited<ReturnType<typeof scenario>>;
 
 export const today = () => new Date().toISOString().slice(0, 10);
 export const inDays = (n: number) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+/**
+ * Date future dans une même année civile pour tous les décalages jusqu'à 90 jours : les plafonds sont annuels,
+ * et une absence à cheval sur deux années se répartit entre elles. Près de la fin d'année, on part du 2 janvier suivant.
+ */
+export const inYear = (n: number) => {
+  const now = new Date(), y = now.getUTCFullYear();
+  const anchor = new Date(Date.now() + 91 * 86400000).getUTCFullYear() === y ? now : new Date(Date.UTC(y + 1, 0, 2));
+  return new Date(anchor.getTime() + n * 86400000).toISOString().slice(0, 10);
+};
 
 export const dcFields = (over: Record<string, any> = {}) => ({ year: new Date().getUTCFullYear(), destinations: "dans les pays de l'Afrique, aux USA et dans les pays membres de l'union Européenne", eStampNumber: '1790 8872 0082', ...over });
 

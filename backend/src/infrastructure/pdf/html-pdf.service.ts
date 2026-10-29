@@ -1,4 +1,5 @@
-import puppeteer, { Browser } from 'puppeteer';
+import type { Browser } from 'puppeteer-core';
+import { launchBrowser } from './browser';
 
 /** Rendu HTML → PDF A4 (marges 2,5 cm comme les formulaires d'origine) avec pied de page « référence — page x/y ». */
 export class HtmlPdfService {
@@ -8,7 +9,7 @@ export class HtmlPdfService {
 
   private browser(): Promise<Browser> {
     if (!this.browserPromise) {
-      this.browserPromise = puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+      this.browserPromise = launchBrowser();
       this.browserPromise.catch(() => { this.browserPromise = null; });
     }
     return this.browserPromise;

@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // rhel-openssl-3.0.x : moteur des fonctions Vercel (Amazon Linux 2023)
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -683,4 +685,15 @@ model Holiday {
 
   @@unique([companyId, date])
   @@map("holidays")
+}
+
+/// Fichiers stockés en base (déploiement sans disque persistant, ex. Vercel) : PDF officiels, pièces jointes, photos, QR.
+model StoredFile {
+  key       String   @id
+  data      Bytes
+  mime      String?
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@map("stored_files")
 }
